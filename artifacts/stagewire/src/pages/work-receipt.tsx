@@ -1,0 +1,105 @@
+import { Camera, CheckCircle2, FileText, LockKeyhole, MapPin, Printer, ReceiptText, ShieldCheck } from 'lucide-react';
+import { Link, useParams } from 'wouter';
+import { useGetCallWorkday } from '@workspace/api-client-react';
+
+function money(value: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+}
+
+function when(value?: string | null) {
+  if (!value) return 'Not recorded';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
+}
+
+function workDate(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+function Datum({ label, value }: { label: string; value: string }) {
+  return <div><div className="receipt-label">{label}</div><div className="receipt-value">{value}</div></div>;
+}
+
+export default function WorkReceiptPage() {
+  const { id } = useParams<{ id: string }>();
+  const callId = Number(id);
+  const workday = useGetCallWorkday(callId, { query: { enabled: Number.isFinite(callId) && callId > 0 } });
+  const data = workday.data;
+  const call = data?.call;
+
+  if (workday.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Opening work receipt…</h2></div></div>;
+  if (workday.isError || !data || !call) return <div className="page-wrap"><div className="error-box"><strong>This receipt could not be loaded.</strong><button className="btn btn-quiet" onClick={() => workday.refetch()}>Try again</button></div></div>;
+
+  const completedChecklist = data.checklist.items.filter((item) => item.checked).length;
+  const expenseTotal = data.expenses.reduce((sum, item) => sum + item.amount, 0);
+
+  return (
+    <div className="page-wrap">
+      <div className="page-heading print-hide">
+        <div>
+          <Link href="/vault" className="link-text">The Vault</Link>
+          <div className="eyebrow" style={{ marginTop: 22 }}>Permanent worker record / #{call.id}</div>
+          <h1 style={{ marginTop: 10 }}>Call Receipt</h1>
+          <p className="subtitle">A clean proof-of-work record created from the call you actually worked.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => window.print()}><Printer size={19} /> Print / save PDF</button>
+      </div>
+
+      <article className="card card-pad receipt-paper" data-testid={`work-receipt-${call.id}`}>
+        <header className="receipt-head">
+          <div>
+            <div className="eyebrow">StageWire / Work Receipt</div>
+            <h2 style={{ marginTop: 8 }}>{call.showName}</h2>
+            <p className="call-meta"><MapPin size={16} style={{ verticalAlign: '-3px' }} /> {call.venue}{call.venueAddress ? ` · ${call.venueAddress}` : ''}</p>
+            <p className="call-meta" style={{ marginTop: 6 }}>{workDate(call.workDate)} · {call.role}</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div className="receipt-label">Estimated gross</div>
+            <div className="receipt-total">{money(call.gross)}</div>
+            <span className="badge badge-finished"><CheckCircle2 size={14} /> Finished</span>
+          </div>
+        </header>
+
+        <div className="receipt-grid" style={{ marginTop: 26 }}>
+          <Datum label="Arrival" value={when(call.arrivalAt)} />
+          <Datum label="Paid start" value={when(call.actualStart)} />
+          <Datum label="Actual end" value={when(call.actualEnd)} />
+          <Datum label="Break" value={`${call.breakMinutes} minutes`} />
+          <Datum label="Hours worked" value={`${call.hours} hours`} />
+          <Datum label="Role performed" value={call.role} />
+          <Datum label="Pay type" value={call.payType} />
+          <Datum label="Rate" value={money(call.hourlyRate)} />
+          <Datum label="Minimum hours" value={`${call.minimumHours} hours`} />
+          <Datum label="Mileage" value={`${call.mileage || 0} mi`} />
+          <Datum label="Parking" value={money(call.parkingExpense)} />
+          <Datum label="Tolls" value={money(call.tollExpense)} />
+        </div>
+
+        <section className="card" style={{ padding: 18, marginTop: 24 }}>
+          <div className="eyebrow">Workday completion</div>
+          <div className="stats-grid" style={{ marginTop: 14 }}>
+            <div className="card stat-card"><span className="stat-label">Checklist</span><strong className="stat-value" style={{ fontSize: '1.35rem' }}>{completedChecklist}/{data.checklist.items.length}</strong></div>
+            <div className="card stat-card"><span className="stat-label">Saved notes</span><strong className="stat-value" style={{ fontSize: '1.35rem' }}>{data.notes.length}</strong></div>
+            <div className="card stat-card"><span className="stat-label">Expenses logged</span><strong className="stat-value" style={{ fontSize: '1.35rem' }}>{money(expenseTotal)}</strong></div>
+          </div>
+        </section>
+
+        {data.expenses.length > 0 && <section style={{ marginTop: 26 }}><div className="eyebrow">Expenses</div><div className="vault-items" style={{ marginTop: 12 }}>{data.expenses.map((expense) => <div className="vault-item" key={expense.id}><span><b>{expense.category}</b>{expense.description ? ` · ${expense.description}` : ''}</span><span>{money(expense.amount)}</span></div>)}</div></section>}
+
+        {data.notes.length > 0 && <section style={{ marginTop: 26 }}><div className="eyebrow">Private work notes</div><div className="vault-items" style={{ marginTop: 12 }}>{data.notes.map((note) => <div className="vault-item" key={note.id}><span>{note.text}</span><span>{note.category || 'note'}</span></div>)}</div></section>}
+
+        {data.checklist.items.length > 0 && <section style={{ marginTop: 26 }}><div className="eyebrow">Call checklist record</div><div className="experience-list" style={{ marginTop: 12 }}>{data.checklist.items.map((item) => <div className="experience-row" key={item.id}><span><b>{item.label}</b><small>{item.isSuggested ? 'role suggestion' : item.isCustom ? 'worker-added' : 'call item'}</small></span><span>{item.checked ? <CheckCircle2 size={20} /> : '—'}</span></div>)}</div></section>}
+
+        {(call.receiptAttachmentName || call.workPhotoName) && <section className="receipt-attachments" style={{ marginTop: 26 }}><div className="eyebrow">Attachments</div><div className="attachment-list" style={{ marginTop: 12 }}>{call.receiptAttachmentName && <span className="attachment-pill"><FileText size={17} /> {call.receiptAttachmentName}</span>}{call.workPhotoName && <span className="attachment-pill"><Camera size={17} /> {call.workPhotoName}</span>}</div></section>}
+
+        <footer className="receipt-foot" style={{ marginTop: 30 }}>
+          <span><LockKeyhole size={15} style={{ verticalAlign: '-3px' }} /> Private by default</span>
+          <span><ShieldCheck size={15} style={{ verticalAlign: '-3px' }} /> Worker-owned record</span>
+          <span><ReceiptText size={15} style={{ verticalAlign: '-3px' }} /> StageWire #{call.id}</span>
+        </footer>
+      </article>
+    </div>
+  );
+}
