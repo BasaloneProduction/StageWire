@@ -10,11 +10,10 @@ function appPath(pathname: string) {
   return base && pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
 }
 
-// V1.4 worker-flow bridge. The legacy app still points open-call actions at
-// /finish?call=:id. Route those actions through Active Call first. When the
-// worker finishes from the workday screen, fetch the saved workday and carry
-// the paid start, notes, and already-logged expenses into the closeout form.
-document.addEventListener('click', async (event) => {
+// V1.4 worker-flow bridge. Legacy open-call actions still point at
+// /finish?call=:id. Send those calls through Active Call first; once the worker
+// is inside the workday, Finish Call opens the new smart closeout screen.
+document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const anchor = target.closest('a');
@@ -27,28 +26,10 @@ document.addEventListener('click', async (event) => {
   if (!Number.isFinite(callId) || callId <= 0) return;
 
   event.preventDefault();
-
-  if (!appPath(window.location.pathname).startsWith('/workday/')) {
-    window.location.assign(`${import.meta.env.BASE_URL}workday/${callId}`);
-    return;
-  }
-
-  try {
-    const response = await fetch(`${import.meta.env.BASE_URL}api/calls/${callId}/workday`);
-    if (response.ok) {
-      const workday = await response.json();
-      sessionStorage.setItem(`stagewire-finish-${callId}`, JSON.stringify({
-        actualStart: workday.call?.actualStart ?? null,
-        arrivalAt: workday.call?.arrivalAt ?? null,
-        expenseAmount: workday.call?.expenseAmount ?? 0,
-        notes: Array.isArray(workday.notes) ? workday.notes.map((note: { text?: string }) => note.text).filter(Boolean) : [],
-      }));
-    }
-  } catch (error) {
-    console.warn('Could not preload the StageWire workday for closeout.', error);
-  }
-
-  window.location.assign(`${import.meta.env.BASE_URL}finish?call=${callId}`);
+  const destination = appPath(window.location.pathname).startsWith('/workday/')
+    ? `closeout/${callId}`
+    : `workday/${callId}`;
+  window.location.assign(`${import.meta.env.BASE_URL}${destination}`);
 });
 
 createRoot(document.getElementById('root')!, {
