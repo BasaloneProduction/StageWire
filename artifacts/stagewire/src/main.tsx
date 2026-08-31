@@ -4,6 +4,7 @@ import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 import './index.css';
+import './bp-theme.css';
 import './accessibility.css';
 
 function appPath(pathname: string) {
