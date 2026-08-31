@@ -75,6 +75,8 @@ export default function ActiveCallPage() {
     addItem.mutate({ id: callId, data: { label } }, { onSuccess: () => { event.currentTarget.reset(); refresh(); } });
   };
 
+  const finishHref = `/finish?call=${call.id}`;
+
   return (
     <div className="page-wrap active-call-page">
       <div className="page-heading">
@@ -83,7 +85,7 @@ export default function ActiveCallPage() {
           <h1 style={{ marginTop: 10 }}>{call.showName}</h1>
           <p className="subtitle"><MapPin size={18} style={{ verticalAlign: '-3px' }} /> {call.venue} · {call.role}</p>
         </div>
-        <Link href={`/finish?call=${call.id}`} className="btn btn-primary"><ReceiptText size={20} /> Finish call</Link>
+        <Link href={finishHref} className="btn btn-primary" data-testid="button-active-finish"><ReceiptText size={20} /> Finish call</Link>
       </div>
 
       <section className="card card-pad" style={{ marginBottom: 22 }}>
@@ -146,8 +148,8 @@ export default function ActiveCallPage() {
 
       <div className="card card-pad" style={{ marginTop: 22, textAlign: 'center' }}>
         <h2>When the work is done, close it out once.</h2>
-        <p className="subtitle" style={{ margin: '10px auto 18px' }}>Your workday details stay attached to this call and feed the permanent receipt.</p>
-        <Link href={`/finish?call=${call.id}`} className="btn btn-primary" style={{ minHeight: 58, fontSize: '1.08rem' }}><ReceiptText size={22} /> Finish call</Link>
+        <p className="subtitle" style={{ margin: '10px auto 18px' }}>Paid start, notes, and expenses already logged here will follow you into closeout. Only add what changed.</p>
+        <Link href={finishHref} className="btn btn-primary" data-testid="button-active-finish-bottom" style={{ minHeight: 58, fontSize: '1.08rem' }}><ReceiptText size={22} /> Finish call</Link>
       </div>
     </div>
   );
