@@ -1,0 +1,61 @@
+/* StageWire V1.4 — Basalone Production family skin.
+   Keep the worker-first layout; replace the generic cream/teal palette with
+   BP black / charcoal / red / white while preserving strong contrast. */
+
+:root {
+  --background: 0 0% 96%;
+  --foreground: 0 0% 7%;
+  --border: 0 0% 78%;
+  --input: 0 0% 62%;
+  --ring: 0 82% 48%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 7%;
+  --primary: 0 82% 46%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 90%;
+  --secondary-foreground: 0 0% 8%;
+  --muted: 0 0% 91%;
+  --muted-foreground: 0 0% 31%;
+  --accent: 0 82% 42%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 78% 42%;
+  --destructive-foreground: 0 0% 100%;
+  --elevate-1: rgba(0, 0, 0, 0.045);
+  --elevate-2: rgba(0, 0, 0, 0.10);
+}
+
+body { background: hsl(0 0% 96%); }
+.side-rail,
+.dashboard-hero { background: hsl(0 0% 7%); color: hsl(0 0% 96%); }
+.brand-mark { background: hsl(var(--primary)); color: white; border-radius: 8px 8px 8px 2px; }
+.rail-kicker,
+.rail-status,
+.nav-link { color: hsl(0 0% 76%); }
+.nav-link:hover { background: rgba(255,255,255,.08); color: white; }
+.nav-link.active { background: hsl(var(--primary)); color: white; }
+.rail-bottom { border-top-color: rgba(255,255,255,.15); }
+.topbar { background: hsla(0, 0%, 100%, .88); }
+.hero-tag { color: hsl(0 86% 68%); }
+.hero-date,
+.hero-detail { color: hsl(0 0% 76%); }
+.hero-detail strong { color: white; }
+.dashboard-hero::after { border-color: rgba(255,255,255,.15); box-shadow: 0 0 0 32px rgba(255,255,255,.025), 0 0 0 64px rgba(220,20,20,.045); }
+.btn-primary { background: hsl(var(--primary)); color: white; }
+.btn-primary:hover { background: hsl(0 82% 39%); }
+.link-text,
+.eyebrow { color: hsl(var(--accent)); }
+.badge-upcoming { background: hsl(0 84% 91%); color: hsl(0 72% 29%); }
+.badge-finished { background: hsl(0 0% 84%); color: hsl(0 0% 16%); }
+.status-dot { background: #75d49b; }
+.stat-accent { border-top-color: hsl(var(--primary)); }
+
+@media (prefers-contrast: more) {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --border: 0 0% 35%;
+    --muted-foreground: 0 0% 20%;
+    --primary: 0 100% 36%;
+    --accent: 0 100% 32%;
+  }
+}
