@@ -1,0 +1,104 @@
+/* StageWire worker-first accessibility layer.
+   Optimized for real backstage phone use: tired eyes, sunlight, gloves, and scratched screens. */
+
+/* Secondary information must remain readable without Large Type. */
+.eyebrow,
+.badge,
+.date-month,
+.receipt-label { font-size: 0.88rem; }
+
+.stat-label,
+.help-text,
+.quick-link small,
+.experience-row small,
+.receipt-foot,
+.vault-item { font-size: 0.95rem; }
+
+.call-meta { font-size: 1rem; }
+
+/* Interactive controls get a glove-friendly floor. */
+.btn,
+.tab,
+.icon-btn,
+.quick-link,
+.attachment-pill,
+.field input,
+.field select { min-height: 52px; }
+
+.field textarea { min-height: 124px; }
+
+input[type='checkbox'],
+input[type='radio'] {
+  min-width: 28px;
+  width: 28px;
+  min-height: 28px;
+  height: 28px;
+  accent-color: hsl(var(--primary));
+}
+
+/* Don't communicate disabled state with faint text alone. */
+button:disabled,
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+/* Keep worker actions usable when links or labels wrap. */
+.btn { white-space: normal; text-align: center; }
+.experience-row { min-height: 52px; align-items: center; }
+.vault-item { min-height: 44px; align-items: center; }
+
+@media (max-width: 700px) {
+  html { font-size: 18px; }
+  body { line-height: 1.5; }
+
+  .page-wrap { padding-left: 14px; padding-right: 14px; padding-bottom: 92px; }
+  .card-pad { padding: 20px 18px; }
+
+  .page-heading h1 { font-size: clamp(2.25rem, 12vw, 3.3rem); line-height: 1; }
+  .page-heading .subtitle { font-size: 1rem; line-height: 1.5; }
+
+  .btn,
+  .tab,
+  .field input,
+  .field select { min-height: 56px; font-size: 1rem; }
+
+  .icon-btn { width: 52px; height: 52px; }
+
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .stat-card { min-height: 112px; }
+  .stat-label { font-size: 0.94rem; }
+  .stat-value { font-size: 1.6rem; }
+
+  .form-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .form-actions > .btn,
+  .form-actions > input,
+  .form-actions > select { width: 100%; }
+
+  .experience-row { min-height: 62px; padding: 14px 0 4px; }
+  .experience-row small { font-size: 0.92rem; }
+
+  .finish-context { align-items: flex-start; flex-direction: column; }
+  .section-label { align-items: flex-start; flex-direction: column; gap: 7px; }
+
+  .receipt-grid { gap: 18px; }
+  .receipt-label { font-size: 0.84rem; }
+  .receipt-value { font-size: 1.08rem; }
+
+  .vault-item { align-items: flex-start; flex-direction: column; padding: 12px 0 4px; }
+
+  /* The active-call finish action is a primary field control, not a tiny link. */
+  .active-call-page .page-heading .btn-primary,
+  .active-call-page > .card:last-child .btn-primary { min-height: 60px; font-size: 1.08rem; }
+}
+
+@media (max-width: 390px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-card { min-height: 96px; }
+}
+
+@media (prefers-contrast: more) {
+  :root { --muted-foreground: 207 22% 28%; --border: 208 24% 55%; }
+  .dark { --muted-foreground: 43 25% 84%; --border: 43 18% 58%; }
+  .card, .btn, input, select, textarea { box-shadow: none; }
+}
