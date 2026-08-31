@@ -10,9 +10,6 @@ function appPath(pathname: string) {
   return base && pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
 }
 
-// V1.4 worker-flow bridge. Keep the stable legacy shell while worker-first
-// screens are extracted. Open calls go through Active Call, and Vault links
-// open the upgraded worker-owned records screen.
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -26,6 +23,12 @@ document.addEventListener('click', (event) => {
   if (path === '/vault') {
     event.preventDefault();
     window.location.assign(`${import.meta.env.BASE_URL}vault-v14`);
+    return;
+  }
+
+  if (path === '/passport') {
+    event.preventDefault();
+    window.location.assign(`${import.meta.env.BASE_URL}passport-v14`);
     return;
   }
 
