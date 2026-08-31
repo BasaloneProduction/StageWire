@@ -26,6 +26,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Build shared library types
+        run: pnpm run typecheck:libs
       - name: Typecheck StageWire
         run: pnpm --dir artifacts/stagewire typecheck
       - name: Build StageWire
