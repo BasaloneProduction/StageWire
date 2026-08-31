@@ -10,9 +10,9 @@ function appPath(pathname: string) {
   return base && pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
 }
 
-// V1.4 worker-flow bridge. Legacy open-call actions still point at
-// /finish?call=:id. Send those calls through Active Call first; once the worker
-// is inside the workday, Finish Call opens the new smart closeout screen.
+// V1.4 worker-flow bridge. Keep the stable legacy shell while worker-first
+// screens are extracted. Open calls go through Active Call, and Vault links
+// open the upgraded worker-owned records screen.
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -20,8 +20,16 @@ document.addEventListener('click', (event) => {
   if (!anchor) return;
 
   const url = new URL(anchor.href, window.location.origin);
-  if (url.origin !== window.location.origin || appPath(url.pathname) !== '/finish') return;
+  if (url.origin !== window.location.origin) return;
+  const path = appPath(url.pathname);
 
+  if (path === '/vault') {
+    event.preventDefault();
+    window.location.assign(`${import.meta.env.BASE_URL}vault-v14`);
+    return;
+  }
+
+  if (path !== '/finish') return;
   const callId = Number(url.searchParams.get('call'));
   if (!Number.isFinite(callId) || callId <= 0) return;
 
@@ -33,7 +41,6 @@ document.addEventListener('click', (event) => {
 });
 
 createRoot(document.getElementById('root')!, {
-  // Keeps caught errors off reportError(), which would raise the dev overlay.
   onCaughtError: (error, errorInfo) => {
     console.error(error, errorInfo.componentStack);
   },
