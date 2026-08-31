@@ -2,10 +2,13 @@ import { createRoot } from 'react-dom/client';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { installDemoApi } from '@/demo-api';
 
 import './index.css';
 import './bp-theme.css';
 import './accessibility.css';
+
+installDemoApi();
 
 function appPath(pathname: string) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
