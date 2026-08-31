@@ -1,0 +1,486 @@
+Continue from the existing **StageWire V1.2** project.
+
+DO NOT rebuild the app from scratch.
+DO NOT replace working architecture.
+DO NOT remove or break Profile, Calls, Finish Call, Call Receipt, The Vault, Career Passport, Skills, Certifications, or existing accessibility features.
+
+Now build:
+
+# STAGEWIRE V1.3 — REAL WORKDAY
+
+The goal of V1.3 is simple:
+
+**Help a stagehand before, during, and immediately after a real live-production call.**
+
+The core StageWire workflow should now become:
+
+**Get Call → Prepare → Arrive → Work → Finish Call → Call Receipt → Vault → Career Passport**
+
+Keep everything mobile-first, fast, human, and worker-controlled.
+
+---
+
+# 1. UPGRADE CALL DETAILS
+
+Create a proper Call Details screen.
+
+A call should support:
+
+* Show / event name
+* Venue
+* Venue address
+* Date
+* Scheduled call time
+* Estimated end time optional
+* Role / department
+* Employer / labor provider optional
+* Crew contact name optional
+* Crew contact phone optional
+* Parking instructions
+* Crew entrance / load-in location
+* Loading dock information optional
+* Dress requirements
+* PPE requirements
+* Tool requirements
+* General call notes
+* Pay rate
+* Pay type: hourly / day rate / flat rate
+* Optional minimum hours / guarantee
+* Call status
+
+Use simple sections so a worker can find critical information quickly.
+
+Important information such as venue, show, call time, and role should be visually prominent.
+
+---
+
+# 2. PRE-CALL CHECKLIST
+
+Add a simple Pre-Call Checklist.
+
+Provide sensible default stagehand items such as:
+
+* Work gloves
+* Crescent wrench
+* Multitool
+* Flashlight / headlamp
+* Hard hat
+* Safety vest
+* Work boots
+* Harness if required
+* Water
+* Phone charger
+* ID / credentials
+
+Allow the worker to:
+
+* Check items off
+* Add custom items
+* Remove custom items
+* Reset checklist
+* Save checklist state for the individual call
+
+Do NOT force every worker to use the same tools.
+
+Different roles require different equipment.
+
+Allow role-specific checklist suggestions without automatically claiming they are required.
+
+---
+
+# 3. ROLE-SPECIFIC CHECKLIST FOUNDATION
+
+Create a simple foundation for role-specific suggestions.
+
+Include at minimum:
+
+* Stagehand
+* Up Rigger
+* Down Rigger
+* Pusher
+* Lighting
+* Audio
+* Video
+* Carpentry
+* Forklift / Lift
+* Truck / Logistics
+* Other
+
+Examples:
+
+An Up Rigger might need harness-related equipment.
+
+A Pusher may need quick access to crew/logistics information.
+
+Lighting, Audio, and Video workers may have different suggested tools.
+
+These are SUGGESTIONS, not mandatory requirements.
+
+Workers must remain able to customize their checklist.
+
+---
+
+# 4. ARRIVE AT CALL
+
+Add a large:
+
+**I'M HERE / ARRIVED**
+
+action on the active call.
+
+When tapped:
+
+* Record arrival timestamp
+* Update call status to Arrived
+* Show the recorded arrival time
+* Allow correction if accidentally tapped
+
+Do NOT automatically start paid work time from arrival.
+
+Arrival time and actual paid start time are different records.
+
+---
+
+# 5. ACTIVE CALL / WORK MODE
+
+Create a simple Active Call screen designed for quick backstage use.
+
+It should prominently show:
+
+* Show/event
+* Venue
+* Role
+* Scheduled call time
+* Arrival time
+* Actual work start if entered
+
+Provide large quick actions:
+
+* Add Note
+* Add Photo placeholder
+* Add Expense
+* View Call Details
+* View Checklist
+* Finish Call
+
+Do NOT clutter this screen.
+
+A worker may be using this with gloves, one hand, poor lighting, or while exhausted.
+
+---
+
+# 6. QUICK NOTES
+
+Allow workers to add timestamped notes during a call.
+
+Examples:
+
+* Changed departments
+* Asked to stay late
+* Meal break
+* Parking issue
+* Equipment issue
+* Supervisor instruction
+* Work performed
+
+Each note should have:
+
+* Timestamp
+* Text
+* Optional category
+
+Notes remain PRIVATE worker records.
+
+---
+
+# 7. EXPENSE TRACKING DURING CALL
+
+Allow expenses to be added during the active call.
+
+Expense fields:
+
+* Amount
+* Category
+* Description
+* Receipt attachment placeholder
+* Timestamp
+
+Suggested categories:
+
+* Parking
+* Toll
+* Mileage
+* Transportation
+* Meal
+* Supplies
+* Lodging
+* Other
+
+Expenses should automatically appear when Finish Call is opened.
+
+Do not make the worker enter the same expense twice.
+
+---
+
+# 8. FINISH CALL UPGRADE
+
+Preserve the existing Finish Call workflow.
+
+Add:
+
+* Scheduled start
+* Actual start
+* Actual end
+* Break minutes
+* Arrival time
+* Role actually performed
+* Pay rate
+* Pay type
+* Expenses already entered during call
+* Additional expense
+* Mileage optional
+* Parking
+* Tolls
+* Notes
+* Work photo placeholder
+* Receipt attachment placeholder
+
+Keep overtime calculations simple for now.
+
+Create data fields/placeholders for future:
+
+* Overtime
+* Double time
+* Meal penalties
+* Minimum guarantees
+
+DO NOT automatically calculate complex union or jurisdiction-specific payroll rules yet.
+
+---
+
+# 9. CALL RECEIPT UPGRADE
+
+Call Receipt becomes the worker's permanent post-gig record.
+
+Display:
+
+* Show/event
+* Venue
+* Address
+* Date
+* Scheduled call
+* Arrival
+* Actual start
+* Actual end
+* Break
+* Role performed
+* Employer/labor provider if entered
+* Hours worked
+* Pay rate/type
+* Estimated gross pay
+* Expenses
+* Mileage
+* Parking
+* Tolls
+* Notes
+* Attachment names/placeholders
+* Completed timestamp
+
+Clearly label calculated pay as:
+
+**Estimated Gross Pay**
+
+unless StageWire has actual payroll information.
+
+Do not imply StageWire is issuing a payroll statement.
+
+---
+
+# 10. SINGLE-SOURCE DATA RULE
+
+This is extremely important.
+
+Workers should NOT have to repeatedly enter the same information.
+
+When Finish Call is completed:
+
+Update the following from the same record:
+
+* Call Receipt
+* The Vault
+* Career Passport experience
+* Future Money/Taxes data source
+
+Do not create duplicate disconnected copies of the same call.
+
+The Call Receipt should be the permanent source record for completed work.
+
+---
+
+# 11. THE VAULT
+
+Completed Call Receipts should automatically appear under:
+
+**Vault → Work**
+
+Notes, photos, receipts, and expenses associated with that call should remain attached to that work record.
+
+Do not require the worker to manually add the completed call to The Vault.
+
+---
+
+# 12. CAREER PASSPORT
+
+Preserve the worker-controlled Career Passport system from V1.2.
+
+Completed calls may become eligible Career Passport experience.
+
+The worker chooses whether each call appears.
+
+Never automatically make work history public.
+
+---
+
+# 13. HOME SCREEN
+
+Upgrade Home so it answers the most important worker questions immediately:
+
+**Where am I working next?**
+**What time is my call?**
+**What am I doing?**
+**What do I need?**
+
+If there is an upcoming call, prominently show:
+
+* Show
+* Venue
+* Date
+* Call time
+* Role
+* Open Call button
+
+If the worker has an active call, the active call should take priority.
+
+Provide a large:
+
+**RETURN TO ACTIVE CALL**
+
+button.
+
+---
+
+# 14. ACCESSIBILITY — NON-NEGOTIABLE
+
+StageWire is being designed for actual stagehands.
+
+Assume:
+
+* Older workers
+* Tired eyes
+* Sunlight
+* Dark backstage environments
+* Gloves
+* Dirty hands
+* Scratched screens
+* One-handed use
+* Workers under time pressure
+
+Maintain:
+
+* Important show/venue information approximately 20–22px minimum
+* Normal information approximately 17–18px minimum
+* Secondary information approximately 16px minimum
+* Buttons approximately 18–20px
+* Tap targets minimum 48×48
+* Strong contrast
+* Visible focus states
+* Proper form labels
+* Human-readable errors
+* Large-text mode
+* Scroll instead of shrinking content
+* No tiny gray text
+
+Do not sacrifice readability just to fit everything on one screen.
+
+---
+
+# 15. DO NOT BUILD YET
+
+Do NOT add:
+
+* Job marketplace / Find Work
+* Employer accounts
+* Public Career Passport
+* QR sharing
+* Messaging
+* Social feed
+* Payments
+* Subscriptions
+* Full Money/Taxes dashboard
+* Education marketplace
+* Travel booking
+* Work/Life support system
+* AI assistant
+* Complex union payroll calculations
+
+Those come later.
+
+---
+
+# 16. TEST THE REAL WORKDAY
+
+Create a temporary realistic test call and actually test:
+
+Add Call
+→ Open Call
+→ Review Call Details
+→ Use Pre-Call Checklist
+→ Mark Arrived
+→ Add Note
+→ Add Expense
+→ Start/enter actual work time
+→ Finish Call
+→ Generate Call Receipt
+→ Verify Vault
+→ Verify Career Passport eligibility
+→ Reload application
+→ Confirm persistence
+
+Also test:
+
+* Arrival can be corrected
+* Checklist persists
+* Custom checklist item persists
+* Notes persist
+* Expenses persist
+* Expense isn't duplicated during Finish Call
+* Call cannot be finished twice
+* Invalid times are rejected
+* Negative amounts are rejected
+* Completed receipt remains intact after reload
+
+Remove temporary test data afterward if appropriate.
+
+---
+
+# 17. FINAL REPORT
+
+When V1.3 is finished, STOP.
+
+Give me:
+
+1. What was built
+2. What changed
+3. What was actually tested
+4. Whether the complete Real Workday workflow passed
+5. Known bugs
+6. Placeholder-only functionality
+7. Accessibility issues remaining
+8. Files changed
+9. Database/schema changes
+10. Any existing functionality that was affected
+11. Your recommendation for V1.4
+
+Do NOT automatically begin V1.4.
+
+Wait for my approval.

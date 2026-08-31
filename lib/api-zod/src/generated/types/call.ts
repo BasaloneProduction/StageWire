@@ -5,17 +5,49 @@
  * StageWire worker workflow API
  * OpenAPI spec version: 0.1.0
  */
+import type { CallPayType } from './callPayType';
 import type { CallStatus } from './callStatus';
 
 export interface Call {
   id: number;
   venue: string;
+  /** @nullable */
+  venueAddress: string | null;
   showName: string;
   workDate: Date;
   /** @nullable */
   scheduledStart: string | null;
+  /** @nullable */
+  estimatedEnd: string | null;
   role: string;
+  /** @nullable */
+  department: string | null;
+  /** @nullable */
+  employer: string | null;
+  /** @nullable */
+  crewContactName: string | null;
+  /** @nullable */
+  crewContactPhone: string | null;
+  /** @nullable */
+  parkingInstructions: string | null;
+  /** @nullable */
+  crewEntrance: string | null;
+  /** @nullable */
+  loadingDockInfo: string | null;
+  /** @nullable */
+  dressRequirements: string | null;
+  /** @nullable */
+  ppeRequirements: string | null;
+  /** @nullable */
+  toolRequirements: string | null;
+  /** @nullable */
+  generalNotes: string | null;
+  payType: CallPayType;
+  /** @minimum 0 */
+  minimumHours: number;
   status: CallStatus;
+  /** @nullable */
+  arrivalAt: string | null;
   /** @nullable */
   actualStart: string | null;
   /** @nullable */
@@ -26,6 +58,12 @@ export interface Call {
   hourlyRate: number;
   /** @minimum 0 */
   expenseAmount: number;
+  /** @minimum 0 */
+  mileage: number;
+  /** @minimum 0 */
+  parkingExpense: number;
+  /** @minimum 0 */
+  tollExpense: number;
   /** @nullable */
   expenseDescription: string | null;
   /** @nullable */
@@ -34,6 +72,14 @@ export interface Call {
   receiptAttachmentName: string | null;
   /** @nullable */
   workPhotoName: string | null;
+  /** @minimum 0 */
+  overtimeHours: number;
+  /** @minimum 0 */
+  doubleTimeHours: number;
+  /** @minimum 0 */
+  mealPenaltyAmount: number;
+  /** @nullable */
+  completedAt: string | null;
   /** @minimum 0 */
   hours: number;
   /** @minimum 0 */

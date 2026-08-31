@@ -11,5 +11,7 @@ export type CallStatus = typeof CallStatus[keyof typeof CallStatus];
 
 export const CallStatus = {
   upcoming: 'upcoming',
+  arrived: 'arrived',
+  active: 'active',
   finished: 'finished',
 } as const;

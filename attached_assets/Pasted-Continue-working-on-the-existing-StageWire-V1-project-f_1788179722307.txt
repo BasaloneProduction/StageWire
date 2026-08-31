@@ -1,0 +1,168 @@
+Continue working on the existing **StageWire V1** project from exactly where the previous Agent session stopped.
+
+DO NOT rebuild the app from scratch.
+DO NOT replace working architecture.
+DO NOT add major new features yet.
+DO NOT publish the app yet.
+
+## STEP 1 — Finish the interrupted fix
+
+The previous session discovered that the Calls page was incorrectly handling the API ISO date/time and crashing.
+
+Finish that fix first.
+
+Verify:
+
+* Calls page loads without crashing
+* Dates display correctly
+* Call times display correctly
+* Upcoming calls display correctly
+* Finished calls display correctly
+* Existing Call Receipt data remains intact
+
+## STEP 2 — Run the complete worker workflow
+
+Test the actual running application from beginning to end:
+
+Home
+→ Add Call
+→ View Call
+→ Finish Call
+→ Enter actual start/end
+→ Enter break
+→ Select actual role
+→ Enter optional expense
+→ Add notes
+→ Finish Call
+→ Generate Call Receipt
+→ Save to The Vault
+→ Update Career Passport
+
+Verify that:
+
+* Worked hours calculate correctly
+* Break time is deducted correctly
+* Gross estimated pay calculates correctly
+* Expenses save correctly
+* Notes save correctly
+* Call Receipt contains the correct information
+* Completed work appears in The Vault
+* Career Passport updates from the completed call
+* The same call cannot be finished twice
+
+## STEP 3 — Test validation
+
+Confirm the server rejects:
+
+* End time before start time
+* Negative break minutes
+* Negative hourly rates
+* Negative expenses
+* Invalid numeric values
+* Attempting to finish an already finished call
+
+Errors must be written in plain human language.
+
+## STEP 4 — Check Worker Profile
+
+Verify the worker profile saves and reloads correctly.
+
+Confirm:
+
+* Display name
+* Home city/state
+* Primary role
+* Additional roles
+* Years experience
+* Skills
+* Certifications
+* Bio
+* Emergency contact
+* Profile photo placeholder
+
+Worker information must remain PRIVATE BY DEFAULT.
+
+## STEP 5 — Check The Vault
+
+Verify the Vault has usable sections for:
+
+* Call Receipts / Work
+* Certifications
+* Skills
+* Documents
+* Photos
+
+Do not build complicated document management yet.
+
+Clearly identify anything that is currently only a placeholder versus actually functional.
+
+## STEP 6 — Check Career Passport
+
+Verify it correctly displays available information from Profile + Vault:
+
+* Worker name
+* Primary role
+* Additional roles
+* Completed call count
+* Experience grouped by role
+* Skills
+* Certifications
+
+Sharing must remain OFF / PRIVATE by default.
+
+Do NOT create public sharing or QR functionality yet.
+
+## STEP 7 — Accessibility inspection
+
+Test the mobile interface.
+
+StageWire must be usable backstage by workers with tired eyes, older workers, workers wearing gloves, and people using phones in sunlight.
+
+Check:
+
+* Main text approximately 17–18px minimum
+* Secondary text approximately 16px minimum
+* Important show/venue information approximately 20–22px
+* Buttons approximately 18–20px
+* Tap targets at least 48×48
+* High contrast
+* Visible keyboard focus
+* Proper form labels
+* ARIA where appropriate
+* Large-text mode still works
+* Bottom navigation is clearly readable
+* No tiny dim gray text
+
+Fix obvious accessibility failures without redesigning the app.
+
+## STEP 8 — Preview security problem
+
+The previous temporary `reed.replit.dev` development preview URL was blocked by Microsoft Defender SmartScreen and reported as a phishing threat.
+
+DO NOT instruct me to:
+
+* bypass SmartScreen
+* disable Microsoft Defender
+* ignore the warning
+* enter personal information into the flagged URL
+
+Determine whether Replit can provide a new clean development preview URL or another safe preview method.
+
+Do NOT publish StageWire merely to solve this issue.
+
+## STEP 9 — Final report
+
+When finished, STOP development and give me a concise report containing:
+
+1. What you fixed
+2. What is working
+3. What you actually tested
+4. What remains placeholder-only
+5. Known bugs
+6. Remaining accessibility issues
+7. Files changed
+8. Database/schema changes
+9. Whether the complete StageWire workflow passed
+10. The safe method I should use to visually preview the app
+
+Do not begin StageWire V1.2 until I approve this V1.1 verification.

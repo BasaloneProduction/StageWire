@@ -5,17 +5,48 @@
  * StageWire worker workflow API
  * OpenAPI spec version: 0.1.0
  */
+import type { CallInputPayType } from './callInputPayType';
 
 export interface CallInput {
   /** @minLength 1 */
   venue: string;
+  /** @nullable */
+  venueAddress?: string | null;
   /** @minLength 1 */
   showName: string;
   workDate: Date;
   /** @nullable */
   scheduledStart?: string | null;
+  /** @nullable */
+  estimatedEnd?: string | null;
   /** @minLength 1 */
   role: string;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  employer?: string | null;
+  /** @nullable */
+  crewContactName?: string | null;
+  /** @nullable */
+  crewContactPhone?: string | null;
+  /** @nullable */
+  parkingInstructions?: string | null;
+  /** @nullable */
+  crewEntrance?: string | null;
+  /** @nullable */
+  loadingDockInfo?: string | null;
+  /** @nullable */
+  dressRequirements?: string | null;
+  /** @nullable */
+  ppeRequirements?: string | null;
+  /** @nullable */
+  toolRequirements?: string | null;
+  /** @nullable */
+  generalNotes?: string | null;
+  payType?: CallInputPayType;
+  /** @minimum 0 */
+  minimumHours?: number;
   /** @minimum 0 */
   hourlyRate?: number;
+  checklist?: string[];
 }

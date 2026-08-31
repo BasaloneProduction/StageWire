@@ -20,11 +20,25 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Get the worker dashboard summary
  */
+export const getDashboardResponseUpcomingCallOneMinimumHoursMin = 0;
+
 export const getDashboardResponseUpcomingCallOneBreakMinutesMin = 0;
 
 export const getDashboardResponseUpcomingCallOneHourlyRateMin = 0;
 
 export const getDashboardResponseUpcomingCallOneExpenseAmountMin = 0;
+
+export const getDashboardResponseUpcomingCallOneMileageMin = 0;
+
+export const getDashboardResponseUpcomingCallOneParkingExpenseMin = 0;
+
+export const getDashboardResponseUpcomingCallOneTollExpenseMin = 0;
+
+export const getDashboardResponseUpcomingCallOneOvertimeHoursMin = 0;
+
+export const getDashboardResponseUpcomingCallOneDoubleTimeHoursMin = 0;
+
+export const getDashboardResponseUpcomingCallOneMealPenaltyAmountMin = 0;
 
 export const getDashboardResponseUpcomingCallOneHoursMin = 0;
 
@@ -40,20 +54,43 @@ export const GetDashboardResponse = zod.object({
   "upcomingCall": zod.object({
   "id": zod.int(),
   "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
   "showName": zod.string(),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
   "role": zod.string(),
-  "status": zod.enum(['upcoming', 'finished']),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(getDashboardResponseUpcomingCallOneMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
   "actualStart": zod.string().nullable(),
   "actualEnd": zod.string().nullable(),
   "breakMinutes": zod.int().min(getDashboardResponseUpcomingCallOneBreakMinutesMin),
   "hourlyRate": zod.number().min(getDashboardResponseUpcomingCallOneHourlyRateMin),
   "expenseAmount": zod.number().min(getDashboardResponseUpcomingCallOneExpenseAmountMin),
+  "mileage": zod.number().min(getDashboardResponseUpcomingCallOneMileageMin),
+  "parkingExpense": zod.number().min(getDashboardResponseUpcomingCallOneParkingExpenseMin),
+  "tollExpense": zod.number().min(getDashboardResponseUpcomingCallOneTollExpenseMin),
   "expenseDescription": zod.string().nullable(),
   "note": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(getDashboardResponseUpcomingCallOneOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(getDashboardResponseUpcomingCallOneDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(getDashboardResponseUpcomingCallOneMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
   "hours": zod.number().min(getDashboardResponseUpcomingCallOneHoursMin),
   "gross": zod.number().min(getDashboardResponseUpcomingCallOneGrossMin)
 }).nullable()
@@ -132,11 +169,25 @@ export const UpdateProfileResponse = zod.object({
 /**
  * @summary List upcoming and completed calls
  */
+export const listCallsResponseMinimumHoursMin = 0;
+
 export const listCallsResponseBreakMinutesMin = 0;
 
 export const listCallsResponseHourlyRateMin = 0;
 
 export const listCallsResponseExpenseAmountMin = 0;
+
+export const listCallsResponseMileageMin = 0;
+
+export const listCallsResponseParkingExpenseMin = 0;
+
+export const listCallsResponseTollExpenseMin = 0;
+
+export const listCallsResponseOvertimeHoursMin = 0;
+
+export const listCallsResponseDoubleTimeHoursMin = 0;
+
+export const listCallsResponseMealPenaltyAmountMin = 0;
 
 export const listCallsResponseHoursMin = 0;
 
@@ -147,20 +198,43 @@ export const listCallsResponseGrossMin = 0;
 export const ListCallsResponseItem = zod.object({
   "id": zod.int(),
   "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
   "showName": zod.string(),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
   "role": zod.string(),
-  "status": zod.enum(['upcoming', 'finished']),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(listCallsResponseMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
   "actualStart": zod.string().nullable(),
   "actualEnd": zod.string().nullable(),
   "breakMinutes": zod.int().min(listCallsResponseBreakMinutesMin),
   "hourlyRate": zod.number().min(listCallsResponseHourlyRateMin),
   "expenseAmount": zod.number().min(listCallsResponseExpenseAmountMin),
+  "mileage": zod.number().min(listCallsResponseMileageMin),
+  "parkingExpense": zod.number().min(listCallsResponseParkingExpenseMin),
+  "tollExpense": zod.number().min(listCallsResponseTollExpenseMin),
   "expenseDescription": zod.string().nullable(),
   "note": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(listCallsResponseOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(listCallsResponseDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(listCallsResponseMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
   "hours": zod.number().min(listCallsResponseHoursMin),
   "gross": zod.number().min(listCallsResponseGrossMin)
 })
@@ -173,24 +247,56 @@ export const ListCallsResponse = zod.array(ListCallsResponseItem)
 
 
 
+export const createCallBodyMinimumHoursMin = 0;
+
 export const createCallBodyHourlyRateMin = 0;
 
 
 
 export const CreateCallBody = zod.object({
   "venue": zod.string().min(1),
+  "venueAddress": zod.string().nullish(),
   "showName": zod.string().min(1),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullish(),
+  "estimatedEnd": zod.string().nullish(),
   "role": zod.string().min(1),
-  "hourlyRate": zod.number().min(createCallBodyHourlyRateMin).optional()
+  "department": zod.string().nullish(),
+  "employer": zod.string().nullish(),
+  "crewContactName": zod.string().nullish(),
+  "crewContactPhone": zod.string().nullish(),
+  "parkingInstructions": zod.string().nullish(),
+  "crewEntrance": zod.string().nullish(),
+  "loadingDockInfo": zod.string().nullish(),
+  "dressRequirements": zod.string().nullish(),
+  "ppeRequirements": zod.string().nullish(),
+  "toolRequirements": zod.string().nullish(),
+  "generalNotes": zod.string().nullish(),
+  "payType": zod.enum(['hourly', 'day', 'flat']).optional(),
+  "minimumHours": zod.number().min(createCallBodyMinimumHoursMin).optional(),
+  "hourlyRate": zod.number().min(createCallBodyHourlyRateMin).optional(),
+  "checklist": zod.array(zod.string()).optional()
 })
+
+export const createCallResponseMinimumHoursMin = 0;
 
 export const createCallResponseBreakMinutesMin = 0;
 
 export const createCallResponseHourlyRateMin = 0;
 
 export const createCallResponseExpenseAmountMin = 0;
+
+export const createCallResponseMileageMin = 0;
+
+export const createCallResponseParkingExpenseMin = 0;
+
+export const createCallResponseTollExpenseMin = 0;
+
+export const createCallResponseOvertimeHoursMin = 0;
+
+export const createCallResponseDoubleTimeHoursMin = 0;
+
+export const createCallResponseMealPenaltyAmountMin = 0;
 
 export const createCallResponseHoursMin = 0;
 
@@ -201,20 +307,43 @@ export const createCallResponseGrossMin = 0;
 export const CreateCallResponse = zod.object({
   "id": zod.int(),
   "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
   "showName": zod.string(),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
   "role": zod.string(),
-  "status": zod.enum(['upcoming', 'finished']),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(createCallResponseMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
   "actualStart": zod.string().nullable(),
   "actualEnd": zod.string().nullable(),
   "breakMinutes": zod.int().min(createCallResponseBreakMinutesMin),
   "hourlyRate": zod.number().min(createCallResponseHourlyRateMin),
   "expenseAmount": zod.number().min(createCallResponseExpenseAmountMin),
+  "mileage": zod.number().min(createCallResponseMileageMin),
+  "parkingExpense": zod.number().min(createCallResponseParkingExpenseMin),
+  "tollExpense": zod.number().min(createCallResponseTollExpenseMin),
   "expenseDescription": zod.string().nullable(),
   "note": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(createCallResponseOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(createCallResponseDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(createCallResponseMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
   "hours": zod.number().min(createCallResponseHoursMin),
   "gross": zod.number().min(createCallResponseGrossMin)
 })
@@ -230,11 +359,25 @@ export const GetCallParams = zod.object({
   "id": zod.coerce.number().int().min(1).describe('Call identifier')
 })
 
+export const getCallResponseMinimumHoursMin = 0;
+
 export const getCallResponseBreakMinutesMin = 0;
 
 export const getCallResponseHourlyRateMin = 0;
 
 export const getCallResponseExpenseAmountMin = 0;
+
+export const getCallResponseMileageMin = 0;
+
+export const getCallResponseParkingExpenseMin = 0;
+
+export const getCallResponseTollExpenseMin = 0;
+
+export const getCallResponseOvertimeHoursMin = 0;
+
+export const getCallResponseDoubleTimeHoursMin = 0;
+
+export const getCallResponseMealPenaltyAmountMin = 0;
 
 export const getCallResponseHoursMin = 0;
 
@@ -245,20 +388,43 @@ export const getCallResponseGrossMin = 0;
 export const GetCallResponse = zod.object({
   "id": zod.int(),
   "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
   "showName": zod.string(),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
   "role": zod.string(),
-  "status": zod.enum(['upcoming', 'finished']),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(getCallResponseMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
   "actualStart": zod.string().nullable(),
   "actualEnd": zod.string().nullable(),
   "breakMinutes": zod.int().min(getCallResponseBreakMinutesMin),
   "hourlyRate": zod.number().min(getCallResponseHourlyRateMin),
   "expenseAmount": zod.number().min(getCallResponseExpenseAmountMin),
+  "mileage": zod.number().min(getCallResponseMileageMin),
+  "parkingExpense": zod.number().min(getCallResponseParkingExpenseMin),
+  "tollExpense": zod.number().min(getCallResponseTollExpenseMin),
   "expenseDescription": zod.string().nullable(),
   "note": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(getCallResponseOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(getCallResponseDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(getCallResponseMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
   "hours": zod.number().min(getCallResponseHoursMin),
   "gross": zod.number().min(getCallResponseGrossMin)
 })
@@ -281,6 +447,14 @@ export const finishCallBodyBreakMinutesMin = 0;
 
 export const finishCallBodyExpenseAmountMin = 0;
 
+export const finishCallBodyAdditionalExpenseAmountMin = 0;
+
+export const finishCallBodyMileageMin = 0;
+
+export const finishCallBodyParkingExpenseMin = 0;
+
+export const finishCallBodyTollExpenseMin = 0;
+
 
 
 export const FinishCallBody = zod.object({
@@ -288,18 +462,39 @@ export const FinishCallBody = zod.object({
   "actualEnd": zod.string().min(1),
   "breakMinutes": zod.int().min(finishCallBodyBreakMinutesMin).optional(),
   "role": zod.string().min(1),
+  "arrivalAt": zod.string().nullish(),
   "expenseAmount": zod.number().min(finishCallBodyExpenseAmountMin).optional(),
+  "additionalExpenseAmount": zod.number().min(finishCallBodyAdditionalExpenseAmountMin).optional(),
+  "additionalExpenseCategory": zod.string().optional(),
+  "additionalExpenseDescription": zod.string().nullish(),
+  "mileage": zod.number().min(finishCallBodyMileageMin).optional(),
+  "parkingExpense": zod.number().min(finishCallBodyParkingExpenseMin).optional(),
+  "tollExpense": zod.number().min(finishCallBodyTollExpenseMin).optional(),
   "expenseDescription": zod.string().nullish(),
   "note": zod.string().nullish(),
   "receiptAttachmentName": zod.string().nullish(),
   "workPhotoName": zod.string().nullish()
 })
 
+export const finishCallResponseMinimumHoursMin = 0;
+
 export const finishCallResponseBreakMinutesMin = 0;
 
 export const finishCallResponseHourlyRateMin = 0;
 
 export const finishCallResponseExpenseAmountMin = 0;
+
+export const finishCallResponseMileageMin = 0;
+
+export const finishCallResponseParkingExpenseMin = 0;
+
+export const finishCallResponseTollExpenseMin = 0;
+
+export const finishCallResponseOvertimeHoursMin = 0;
+
+export const finishCallResponseDoubleTimeHoursMin = 0;
+
+export const finishCallResponseMealPenaltyAmountMin = 0;
 
 export const finishCallResponseHoursMin = 0;
 
@@ -310,33 +505,547 @@ export const finishCallResponseGrossMin = 0;
 export const FinishCallResponse = zod.object({
   "id": zod.int(),
   "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
   "showName": zod.string(),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
   "role": zod.string(),
-  "status": zod.enum(['upcoming', 'finished']),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(finishCallResponseMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
   "actualStart": zod.string().nullable(),
   "actualEnd": zod.string().nullable(),
   "breakMinutes": zod.int().min(finishCallResponseBreakMinutesMin),
   "hourlyRate": zod.number().min(finishCallResponseHourlyRateMin),
   "expenseAmount": zod.number().min(finishCallResponseExpenseAmountMin),
+  "mileage": zod.number().min(finishCallResponseMileageMin),
+  "parkingExpense": zod.number().min(finishCallResponseParkingExpenseMin),
+  "tollExpense": zod.number().min(finishCallResponseTollExpenseMin),
   "expenseDescription": zod.string().nullable(),
   "note": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(finishCallResponseOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(finishCallResponseDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(finishCallResponseMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
   "hours": zod.number().min(finishCallResponseHoursMin),
   "gross": zod.number().min(finishCallResponseGrossMin)
 })
 
 
 /**
+ * @summary Get the active workday data for a call
+ */
+
+
+
+export const GetCallWorkdayParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+export const getCallWorkdayResponseCallMinimumHoursMin = 0;
+
+export const getCallWorkdayResponseCallBreakMinutesMin = 0;
+
+export const getCallWorkdayResponseCallHourlyRateMin = 0;
+
+export const getCallWorkdayResponseCallExpenseAmountMin = 0;
+
+export const getCallWorkdayResponseCallMileageMin = 0;
+
+export const getCallWorkdayResponseCallParkingExpenseMin = 0;
+
+export const getCallWorkdayResponseCallTollExpenseMin = 0;
+
+export const getCallWorkdayResponseCallOvertimeHoursMin = 0;
+
+export const getCallWorkdayResponseCallDoubleTimeHoursMin = 0;
+
+export const getCallWorkdayResponseCallMealPenaltyAmountMin = 0;
+
+export const getCallWorkdayResponseCallHoursMin = 0;
+
+export const getCallWorkdayResponseCallGrossMin = 0;
+
+export const getCallWorkdayResponseExpensesItemAmountMin = 0;
+
+
+
+export const GetCallWorkdayResponse = zod.object({
+  "call": zod.object({
+  "id": zod.int(),
+  "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
+  "showName": zod.string(),
+  "workDate": zod.coerce.date(),
+  "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
+  "role": zod.string(),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(getCallWorkdayResponseCallMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
+  "actualStart": zod.string().nullable(),
+  "actualEnd": zod.string().nullable(),
+  "breakMinutes": zod.int().min(getCallWorkdayResponseCallBreakMinutesMin),
+  "hourlyRate": zod.number().min(getCallWorkdayResponseCallHourlyRateMin),
+  "expenseAmount": zod.number().min(getCallWorkdayResponseCallExpenseAmountMin),
+  "mileage": zod.number().min(getCallWorkdayResponseCallMileageMin),
+  "parkingExpense": zod.number().min(getCallWorkdayResponseCallParkingExpenseMin),
+  "tollExpense": zod.number().min(getCallWorkdayResponseCallTollExpenseMin),
+  "expenseDescription": zod.string().nullable(),
+  "note": zod.string().nullable(),
+  "receiptAttachmentName": zod.string().nullable(),
+  "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(getCallWorkdayResponseCallOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(getCallWorkdayResponseCallDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(getCallWorkdayResponseCallMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
+  "hours": zod.number().min(getCallWorkdayResponseCallHoursMin),
+  "gross": zod.number().min(getCallWorkdayResponseCallGrossMin)
+}),
+  "checklist": zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "label": zod.string(),
+  "checked": zod.boolean(),
+  "isCustom": zod.boolean(),
+  "isSuggested": zod.boolean(),
+  "sortOrder": zod.int(),
+  "createdAt": zod.string()
+}))
+}),
+  "notes": zod.array(zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "text": zod.string(),
+  "category": zod.string().nullable(),
+  "createdAt": zod.string()
+})),
+  "expenses": zod.array(zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "amount": zod.number().min(getCallWorkdayResponseExpensesItemAmountMin),
+  "category": zod.string(),
+  "description": zod.string().nullable(),
+  "receiptAttachmentName": zod.string().nullable(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Record or correct arrival at a call
+ */
+
+
+
+export const ArriveAtCallParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+
+
+
+export const ArriveAtCallBody = zod.object({
+  "arrivalAt": zod.string().min(1)
+})
+
+export const arriveAtCallResponseMinimumHoursMin = 0;
+
+export const arriveAtCallResponseBreakMinutesMin = 0;
+
+export const arriveAtCallResponseHourlyRateMin = 0;
+
+export const arriveAtCallResponseExpenseAmountMin = 0;
+
+export const arriveAtCallResponseMileageMin = 0;
+
+export const arriveAtCallResponseParkingExpenseMin = 0;
+
+export const arriveAtCallResponseTollExpenseMin = 0;
+
+export const arriveAtCallResponseOvertimeHoursMin = 0;
+
+export const arriveAtCallResponseDoubleTimeHoursMin = 0;
+
+export const arriveAtCallResponseMealPenaltyAmountMin = 0;
+
+export const arriveAtCallResponseHoursMin = 0;
+
+export const arriveAtCallResponseGrossMin = 0;
+
+
+
+export const ArriveAtCallResponse = zod.object({
+  "id": zod.int(),
+  "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
+  "showName": zod.string(),
+  "workDate": zod.coerce.date(),
+  "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
+  "role": zod.string(),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(arriveAtCallResponseMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
+  "actualStart": zod.string().nullable(),
+  "actualEnd": zod.string().nullable(),
+  "breakMinutes": zod.int().min(arriveAtCallResponseBreakMinutesMin),
+  "hourlyRate": zod.number().min(arriveAtCallResponseHourlyRateMin),
+  "expenseAmount": zod.number().min(arriveAtCallResponseExpenseAmountMin),
+  "mileage": zod.number().min(arriveAtCallResponseMileageMin),
+  "parkingExpense": zod.number().min(arriveAtCallResponseParkingExpenseMin),
+  "tollExpense": zod.number().min(arriveAtCallResponseTollExpenseMin),
+  "expenseDescription": zod.string().nullable(),
+  "note": zod.string().nullable(),
+  "receiptAttachmentName": zod.string().nullable(),
+  "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(arriveAtCallResponseOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(arriveAtCallResponseDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(arriveAtCallResponseMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
+  "hours": zod.number().min(arriveAtCallResponseHoursMin),
+  "gross": zod.number().min(arriveAtCallResponseGrossMin)
+})
+
+
+/**
+ * @summary Record or correct the paid work start
+ */
+
+
+
+export const StartCallWorkParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+
+
+
+export const StartCallWorkBody = zod.object({
+  "actualStart": zod.string().min(1)
+})
+
+export const startCallWorkResponseMinimumHoursMin = 0;
+
+export const startCallWorkResponseBreakMinutesMin = 0;
+
+export const startCallWorkResponseHourlyRateMin = 0;
+
+export const startCallWorkResponseExpenseAmountMin = 0;
+
+export const startCallWorkResponseMileageMin = 0;
+
+export const startCallWorkResponseParkingExpenseMin = 0;
+
+export const startCallWorkResponseTollExpenseMin = 0;
+
+export const startCallWorkResponseOvertimeHoursMin = 0;
+
+export const startCallWorkResponseDoubleTimeHoursMin = 0;
+
+export const startCallWorkResponseMealPenaltyAmountMin = 0;
+
+export const startCallWorkResponseHoursMin = 0;
+
+export const startCallWorkResponseGrossMin = 0;
+
+
+
+export const StartCallWorkResponse = zod.object({
+  "id": zod.int(),
+  "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
+  "showName": zod.string(),
+  "workDate": zod.coerce.date(),
+  "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
+  "role": zod.string(),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(startCallWorkResponseMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
+  "actualStart": zod.string().nullable(),
+  "actualEnd": zod.string().nullable(),
+  "breakMinutes": zod.int().min(startCallWorkResponseBreakMinutesMin),
+  "hourlyRate": zod.number().min(startCallWorkResponseHourlyRateMin),
+  "expenseAmount": zod.number().min(startCallWorkResponseExpenseAmountMin),
+  "mileage": zod.number().min(startCallWorkResponseMileageMin),
+  "parkingExpense": zod.number().min(startCallWorkResponseParkingExpenseMin),
+  "tollExpense": zod.number().min(startCallWorkResponseTollExpenseMin),
+  "expenseDescription": zod.string().nullable(),
+  "note": zod.string().nullable(),
+  "receiptAttachmentName": zod.string().nullable(),
+  "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(startCallWorkResponseOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(startCallWorkResponseDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(startCallWorkResponseMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
+  "hours": zod.number().min(startCallWorkResponseHoursMin),
+  "gross": zod.number().min(startCallWorkResponseGrossMin)
+})
+
+
+/**
+ * @summary Get the checklist for a call
+ */
+
+
+
+export const GetCallChecklistParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+export const GetCallChecklistResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "label": zod.string(),
+  "checked": zod.boolean(),
+  "isCustom": zod.boolean(),
+  "isSuggested": zod.boolean(),
+  "sortOrder": zod.int(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Add a custom checklist item
+ */
+
+
+
+export const AddChecklistItemParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+
+
+
+export const AddChecklistItemBody = zod.object({
+  "label": zod.string().min(1)
+})
+
+export const AddChecklistItemResponse = zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "label": zod.string(),
+  "checked": zod.boolean(),
+  "isCustom": zod.boolean(),
+  "isSuggested": zod.boolean(),
+  "sortOrder": zod.int(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Check or rename a checklist item
+ */
+
+
+
+
+export const UpdateChecklistItemParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier'),
+  "itemId": zod.coerce.number().int().min(1).describe('Checklist item identifier')
+})
+
+
+
+
+export const UpdateChecklistItemBody = zod.object({
+  "checked": zod.boolean().optional(),
+  "label": zod.string().min(1).optional()
+})
+
+export const UpdateChecklistItemResponse = zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "label": zod.string(),
+  "checked": zod.boolean(),
+  "isCustom": zod.boolean(),
+  "isSuggested": zod.boolean(),
+  "sortOrder": zod.int(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Remove a custom checklist item
+ */
+
+
+
+
+export const DeleteChecklistItemParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier'),
+  "itemId": zod.coerce.number().int().min(1).describe('Checklist item identifier')
+})
+
+export const DeleteChecklistItemResponse = zod.void()
+
+
+/**
+ * @summary Reset checklist checks for a call
+ */
+
+
+
+export const ResetCallChecklistParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+export const ResetCallChecklistResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "label": zod.string(),
+  "checked": zod.boolean(),
+  "isCustom": zod.boolean(),
+  "isSuggested": zod.boolean(),
+  "sortOrder": zod.int(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Add a private timestamped note to a call
+ */
+
+
+
+export const AddCallNoteParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+
+
+
+export const AddCallNoteBody = zod.object({
+  "text": zod.string().min(1),
+  "category": zod.string().nullish()
+})
+
+export const AddCallNoteResponse = zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "text": zod.string(),
+  "category": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Add a private expense to a call
+ */
+
+
+
+export const AddCallExpenseParams = zod.object({
+  "id": zod.coerce.number().int().min(1).describe('Call identifier')
+})
+
+export const addCallExpenseBodyAmountMin = 0;
+
+
+
+
+export const AddCallExpenseBody = zod.object({
+  "amount": zod.number().min(addCallExpenseBodyAmountMin),
+  "category": zod.string().min(1),
+  "description": zod.string().nullish(),
+  "receiptAttachmentName": zod.string().nullish()
+})
+
+export const addCallExpenseResponseAmountMin = 0;
+
+
+
+export const AddCallExpenseResponse = zod.object({
+  "id": zod.int(),
+  "callId": zod.int(),
+  "amount": zod.number().min(addCallExpenseResponseAmountMin),
+  "category": zod.string(),
+  "description": zod.string().nullable(),
+  "receiptAttachmentName": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Get the worker-owned Vault
  */
+export const getVaultResponseCallsItemMinimumHoursMin = 0;
+
 export const getVaultResponseCallsItemBreakMinutesMin = 0;
 
 export const getVaultResponseCallsItemHourlyRateMin = 0;
 
 export const getVaultResponseCallsItemExpenseAmountMin = 0;
+
+export const getVaultResponseCallsItemMileageMin = 0;
+
+export const getVaultResponseCallsItemParkingExpenseMin = 0;
+
+export const getVaultResponseCallsItemTollExpenseMin = 0;
+
+export const getVaultResponseCallsItemOvertimeHoursMin = 0;
+
+export const getVaultResponseCallsItemDoubleTimeHoursMin = 0;
+
+export const getVaultResponseCallsItemMealPenaltyAmountMin = 0;
 
 export const getVaultResponseCallsItemHoursMin = 0;
 
@@ -348,20 +1057,43 @@ export const GetVaultResponse = zod.object({
   "calls": zod.array(zod.object({
   "id": zod.int(),
   "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
   "showName": zod.string(),
   "workDate": zod.coerce.date(),
   "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
   "role": zod.string(),
-  "status": zod.enum(['upcoming', 'finished']),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(getVaultResponseCallsItemMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
   "actualStart": zod.string().nullable(),
   "actualEnd": zod.string().nullable(),
   "breakMinutes": zod.int().min(getVaultResponseCallsItemBreakMinutesMin),
   "hourlyRate": zod.number().min(getVaultResponseCallsItemHourlyRateMin),
   "expenseAmount": zod.number().min(getVaultResponseCallsItemExpenseAmountMin),
+  "mileage": zod.number().min(getVaultResponseCallsItemMileageMin),
+  "parkingExpense": zod.number().min(getVaultResponseCallsItemParkingExpenseMin),
+  "tollExpense": zod.number().min(getVaultResponseCallsItemTollExpenseMin),
   "expenseDescription": zod.string().nullable(),
   "note": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(getVaultResponseCallsItemOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(getVaultResponseCallsItemDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(getVaultResponseCallsItemMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
   "hours": zod.number().min(getVaultResponseCallsItemHoursMin),
   "gross": zod.number().min(getVaultResponseCallsItemGrossMin)
 })),

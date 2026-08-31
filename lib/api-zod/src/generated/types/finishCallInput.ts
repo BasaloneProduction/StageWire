@@ -15,8 +15,21 @@ export interface FinishCallInput {
   breakMinutes?: number;
   /** @minLength 1 */
   role: string;
+  /** @nullable */
+  arrivalAt?: string | null;
   /** @minimum 0 */
   expenseAmount?: number;
+  /** @minimum 0 */
+  additionalExpenseAmount?: number;
+  additionalExpenseCategory?: string;
+  /** @nullable */
+  additionalExpenseDescription?: string | null;
+  /** @minimum 0 */
+  mileage?: number;
+  /** @minimum 0 */
+  parkingExpense?: number;
+  /** @minimum 0 */
+  tollExpense?: number;
   /** @nullable */
   expenseDescription?: string | null;
   /** @nullable */

@@ -53,23 +53,65 @@ export interface ProfileInput {
   profilePhotoName?: string | null;
 }
 
+export type CallPayType = typeof CallPayType[keyof typeof CallPayType];
+
+
+export const CallPayType = {
+  hourly: 'hourly',
+  day: 'day',
+  flat: 'flat',
+} as const;
+
 export type CallStatus = typeof CallStatus[keyof typeof CallStatus];
 
 
 export const CallStatus = {
   upcoming: 'upcoming',
+  arrived: 'arrived',
+  active: 'active',
   finished: 'finished',
 } as const;
 
 export interface Call {
   id: number;
   venue: string;
+  /** @nullable */
+  venueAddress: string | null;
   showName: string;
   workDate: string;
   /** @nullable */
   scheduledStart: string | null;
+  /** @nullable */
+  estimatedEnd: string | null;
   role: string;
+  /** @nullable */
+  department: string | null;
+  /** @nullable */
+  employer: string | null;
+  /** @nullable */
+  crewContactName: string | null;
+  /** @nullable */
+  crewContactPhone: string | null;
+  /** @nullable */
+  parkingInstructions: string | null;
+  /** @nullable */
+  crewEntrance: string | null;
+  /** @nullable */
+  loadingDockInfo: string | null;
+  /** @nullable */
+  dressRequirements: string | null;
+  /** @nullable */
+  ppeRequirements: string | null;
+  /** @nullable */
+  toolRequirements: string | null;
+  /** @nullable */
+  generalNotes: string | null;
+  payType: CallPayType;
+  /** @minimum 0 */
+  minimumHours: number;
   status: CallStatus;
+  /** @nullable */
+  arrivalAt: string | null;
   /** @nullable */
   actualStart: string | null;
   /** @nullable */
@@ -80,6 +122,12 @@ export interface Call {
   hourlyRate: number;
   /** @minimum 0 */
   expenseAmount: number;
+  /** @minimum 0 */
+  mileage: number;
+  /** @minimum 0 */
+  parkingExpense: number;
+  /** @minimum 0 */
+  tollExpense: number;
   /** @nullable */
   expenseDescription: string | null;
   /** @nullable */
@@ -89,23 +137,70 @@ export interface Call {
   /** @nullable */
   workPhotoName: string | null;
   /** @minimum 0 */
+  overtimeHours: number;
+  /** @minimum 0 */
+  doubleTimeHours: number;
+  /** @minimum 0 */
+  mealPenaltyAmount: number;
+  /** @nullable */
+  completedAt: string | null;
+  /** @minimum 0 */
   hours: number;
   /** @minimum 0 */
   gross: number;
 }
 
+export type CallInputPayType = typeof CallInputPayType[keyof typeof CallInputPayType];
+
+
+export const CallInputPayType = {
+  hourly: 'hourly',
+  day: 'day',
+  flat: 'flat',
+} as const;
+
 export interface CallInput {
   /** @minLength 1 */
   venue: string;
+  /** @nullable */
+  venueAddress?: string | null;
   /** @minLength 1 */
   showName: string;
   workDate: string;
   /** @nullable */
   scheduledStart?: string | null;
+  /** @nullable */
+  estimatedEnd?: string | null;
   /** @minLength 1 */
   role: string;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  employer?: string | null;
+  /** @nullable */
+  crewContactName?: string | null;
+  /** @nullable */
+  crewContactPhone?: string | null;
+  /** @nullable */
+  parkingInstructions?: string | null;
+  /** @nullable */
+  crewEntrance?: string | null;
+  /** @nullable */
+  loadingDockInfo?: string | null;
+  /** @nullable */
+  dressRequirements?: string | null;
+  /** @nullable */
+  ppeRequirements?: string | null;
+  /** @nullable */
+  toolRequirements?: string | null;
+  /** @nullable */
+  generalNotes?: string | null;
+  payType?: CallInputPayType;
+  /** @minimum 0 */
+  minimumHours?: number;
   /** @minimum 0 */
   hourlyRate?: number;
+  checklist?: string[];
 }
 
 export interface FinishCallInput {
@@ -117,8 +212,21 @@ export interface FinishCallInput {
   breakMinutes?: number;
   /** @minLength 1 */
   role: string;
+  /** @nullable */
+  arrivalAt?: string | null;
   /** @minimum 0 */
   expenseAmount?: number;
+  /** @minimum 0 */
+  additionalExpenseAmount?: number;
+  additionalExpenseCategory?: string;
+  /** @nullable */
+  additionalExpenseDescription?: string | null;
+  /** @minimum 0 */
+  mileage?: number;
+  /** @minimum 0 */
+  parkingExpense?: number;
+  /** @minimum 0 */
+  tollExpense?: number;
   /** @nullable */
   expenseDescription?: string | null;
   /** @nullable */
@@ -127,6 +235,89 @@ export interface FinishCallInput {
   receiptAttachmentName?: string | null;
   /** @nullable */
   workPhotoName?: string | null;
+}
+
+export interface ArrivalInput {
+  /** @minLength 1 */
+  arrivalAt: string;
+}
+
+export interface StartWorkInput {
+  /** @minLength 1 */
+  actualStart: string;
+}
+
+export interface ChecklistItem {
+  id: number;
+  callId: number;
+  label: string;
+  checked: boolean;
+  isCustom: boolean;
+  isSuggested: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface Checklist {
+  items: ChecklistItem[];
+}
+
+export interface ChecklistItemInput {
+  /** @minLength 1 */
+  label: string;
+}
+
+export interface ChecklistItemUpdateInput {
+  checked?: boolean;
+  /** @minLength 1 */
+  label?: string;
+}
+
+export interface CallNote {
+  id: number;
+  callId: number;
+  text: string;
+  /** @nullable */
+  category: string | null;
+  createdAt: string;
+}
+
+export interface NoteInput {
+  /** @minLength 1 */
+  text: string;
+  /** @nullable */
+  category?: string | null;
+}
+
+export interface CallExpense {
+  id: number;
+  callId: number;
+  /** @minimum 0 */
+  amount: number;
+  category: string;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  receiptAttachmentName: string | null;
+  createdAt: string;
+}
+
+export interface ExpenseInput {
+  /** @minimum 0 */
+  amount: number;
+  /** @minLength 1 */
+  category: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  receiptAttachmentName?: string | null;
+}
+
+export interface Workday {
+  call: Call;
+  checklist: Checklist;
+  notes: CallNote[];
+  expenses: CallExpense[];
 }
 
 export type AttachmentKind = typeof AttachmentKind[keyof typeof AttachmentKind];
