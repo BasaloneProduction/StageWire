@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: StageWire worker workflow API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: profile
+    description: Worker profile operations
+  - name: calls
+    description: Work call operations
+  - name: vault
+    description: Worker-owned archive operations
+  - name: passport
+    description: Career Passport operations
 paths:
   /healthz:
     get:
@@ -24,13 +32,500 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [calls]
+      summary: Get the worker dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get the private worker profile
+      responses:
+        "200":
+          description: Worker profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkerProfile"
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Save the private worker profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: Updated worker profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkerProfile"
+        "400":
+          description: Invalid profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /calls:
+    get:
+      operationId: listCalls
+      tags: [calls]
+      summary: List upcoming and completed calls
+      responses:
+        "200":
+          description: Calls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Call"
+    post:
+      operationId: createCall
+      tags: [calls]
+      summary: Add an upcoming call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CallInput"
+      responses:
+        "201":
+          description: Created call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+        "400":
+          description: Invalid call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /calls/{id}:
+    get:
+      operationId: getCall
+      tags: [calls]
+      summary: Get one call
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      responses:
+        "200":
+          description: Call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+        "404":
+          description: Call not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /calls/{id}/finish:
+    post:
+      operationId: finishCall
+      tags: [calls]
+      summary: Finish a call and create its permanent receipt
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinishCallInput"
+      responses:
+        "200":
+          description: Permanent call receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+        "400":
+          description: Invalid finish details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Call not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Call is already finished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /vault:
+    get:
+      operationId: getVault
+      tags: [vault]
+      summary: Get the worker-owned Vault
+      responses:
+        "200":
+          description: Vault sections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vault"
+
+  /passport:
+    get:
+      operationId: getPassport
+      tags: [passport]
+      summary: Get the private Career Passport summary
+      responses:
+        "200":
+          description: Career Passport
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CareerPassport"
+
 components:
+  parameters:
+    CallId:
+      name: id
+      in: path
+      required: true
+      description: Call identifier
+      schema:
+        type: integer
+        minimum: 1
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
     HealthStatus:
       type: object
       properties:
         status:
           type: string
+      required: [status]
+    WorkerProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        displayName:
+          type: string
+        homeCityState:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        primaryRole:
+          type: string
+        additionalRoles:
+          type: array
+          items:
+            type: string
+        yearsExperience:
+          type: integer
+          minimum: 0
+        skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        bio:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+        profilePhotoName:
+          type: ["string", "null"]
+        privateByDefault:
+          type: boolean
       required:
+        - id
+        - displayName
+        - homeCityState
+        - phone
+        - email
+        - primaryRole
+        - additionalRoles
+        - yearsExperience
+        - skills
+        - certifications
+        - bio
+        - emergencyContact
+        - profilePhotoName
+        - privateByDefault
+    ProfileInput:
+      type: object
+      properties:
+        displayName:
+          type: string
+        homeCityState:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        primaryRole:
+          type: string
+        additionalRoles:
+          type: array
+          items:
+            type: string
+        yearsExperience:
+          type: integer
+          minimum: 0
+        skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        bio:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+        profilePhotoName:
+          type: ["string", "null"]
+      required:
+        - displayName
+        - primaryRole
+    Call:
+      type: object
+      properties:
+        id:
+          type: integer
+        venue:
+          type: string
+        showName:
+          type: string
+        workDate:
+          type: string
+          format: date
+        scheduledStart:
+          type: ["string", "null"]
+        role:
+          type: string
+        status:
+          type: string
+          enum: [upcoming, finished]
+        actualStart:
+          type: ["string", "null"]
+        actualEnd:
+          type: ["string", "null"]
+        breakMinutes:
+          type: integer
+          minimum: 0
+        hourlyRate:
+          type: number
+          minimum: 0
+        expenseAmount:
+          type: number
+          minimum: 0
+        expenseDescription:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        receiptAttachmentName:
+          type: ["string", "null"]
+        workPhotoName:
+          type: ["string", "null"]
+        hours:
+          type: number
+          minimum: 0
+        gross:
+          type: number
+          minimum: 0
+      required:
+        - id
+        - venue
+        - showName
+        - workDate
+        - scheduledStart
+        - role
         - status
-
+        - actualStart
+        - actualEnd
+        - breakMinutes
+        - hourlyRate
+        - expenseAmount
+        - expenseDescription
+        - note
+        - receiptAttachmentName
+        - workPhotoName
+        - hours
+        - gross
+    CallInput:
+      type: object
+      properties:
+        venue:
+          type: string
+          minLength: 1
+        showName:
+          type: string
+          minLength: 1
+        workDate:
+          type: string
+          format: date
+        scheduledStart:
+          type: ["string", "null"]
+        role:
+          type: string
+          minLength: 1
+        hourlyRate:
+          type: number
+          minimum: 0
+      required: [venue, showName, workDate, role]
+    FinishCallInput:
+      type: object
+      properties:
+        actualStart:
+          type: string
+          minLength: 1
+        actualEnd:
+          type: string
+          minLength: 1
+        breakMinutes:
+          type: integer
+          minimum: 0
+        role:
+          type: string
+          minLength: 1
+        expenseAmount:
+          type: number
+          minimum: 0
+        expenseDescription:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        receiptAttachmentName:
+          type: ["string", "null"]
+        workPhotoName:
+          type: ["string", "null"]
+      required: [actualStart, actualEnd, role]
+    Attachment:
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [document, photo]
+        callId:
+          type: integer
+      required: [name, kind, callId]
+    Vault:
+      type: object
+      properties:
+        calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/Call"
+        certifications:
+          type: array
+          items:
+            type: string
+        skills:
+          type: array
+          items:
+            type: string
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+      required: [calls, certifications, skills, documents, photos]
+    RoleExperience:
+      type: object
+      properties:
+        role:
+          type: string
+        calls:
+          type: integer
+        hours:
+          type: number
+      required: [role, calls, hours]
+    CareerPassport:
+      type: object
+      properties:
+        workerName:
+          type: string
+        primaryRole:
+          type: string
+        additionalRoles:
+          type: array
+          items:
+            type: string
+        completedCallCount:
+          type: integer
+        experience:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleExperience"
+        skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        privateByDefault:
+          type: boolean
+      required:
+        - workerName
+        - primaryRole
+        - additionalRoles
+        - completedCallCount
+        - experience
+        - skills
+        - certifications
+        - privateByDefault
+    DashboardSummary:
+      type: object
+      properties:
+        upcomingCount:
+          type: integer
+        completedCount:
+          type: integer
+        hoursThisMonth:
+          type: number
+        grossThisMonth:
+          type: number
+        upcomingCall:
+          type: ["object", "null"]
+          allOf:
+            - $ref: "#/components/schemas/Call"
+      required: [upcomingCount, completedCount, hoursThisMonth, grossThisMonth, upcomingCall]

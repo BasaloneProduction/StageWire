@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "StageWire"
+description = "A worker-first mobile app for stagehands, riggers, and live-production workers to track calls, finish gigs, keep permanent receipts, organize career proof, and control their own work history."
+version = "1.0.0"
+id = "artifacts/stagewire"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24435
+
+[services.development]
+run = "pnpm --filter @workspace/stagewire run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/stagewire", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/stagewire/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24435"
+BASE_PATH = "/"
