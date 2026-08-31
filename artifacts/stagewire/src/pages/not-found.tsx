@@ -6,7 +6,12 @@ export default function NotFound() {
   // V1.4 bridge: the current app router still lives in the legacy single-file
   // App.tsx. Keep that stable while we extract screens, but make the new
   // worker-first Active Call route live immediately.
-  if (/^\/workday\/\d+\/?$/.test(window.location.pathname)) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const appPath = base && window.location.pathname.startsWith(base)
+    ? window.location.pathname.slice(base.length) || '/'
+    : window.location.pathname;
+
+  if (/^\/workday\/\d+\/?$/.test(appPath)) {
     return <ActiveCallPage />;
   }
 
