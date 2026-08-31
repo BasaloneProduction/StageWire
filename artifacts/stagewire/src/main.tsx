@@ -5,25 +5,50 @@ import { ErrorBoundary } from '@/components/error-boundary';
 
 import './index.css';
 
+function appPath(pathname: string) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  return base && pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
+}
+
 // V1.4 worker-flow bridge. The legacy app still points open-call actions at
-// /finish?call=:id. Until those screens are fully extracted from App.tsx,
-// route those actions through the new Active Call workday first. Once the
-// worker is already on /workday/:id, the Finish Call action is allowed through.
-document.addEventListener('click', (event) => {
-  if (window.location.pathname.startsWith('/workday/')) return;
+// /finish?call=:id. Route those actions through Active Call first. When the
+// worker finishes from the workday screen, fetch the saved workday and carry
+// the paid start, notes, and already-logged expenses into the closeout form.
+document.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const anchor = target.closest('a');
   if (!anchor) return;
 
   const url = new URL(anchor.href, window.location.origin);
-  if (url.origin !== window.location.origin || url.pathname !== '/finish') return;
+  if (url.origin !== window.location.origin || appPath(url.pathname) !== '/finish') return;
 
   const callId = Number(url.searchParams.get('call'));
   if (!Number.isFinite(callId) || callId <= 0) return;
 
   event.preventDefault();
-  window.location.assign(`/workday/${callId}`);
+
+  if (!appPath(window.location.pathname).startsWith('/workday/')) {
+    window.location.assign(`${import.meta.env.BASE_URL}workday/${callId}`);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}api/calls/${callId}/workday`);
+    if (response.ok) {
+      const workday = await response.json();
+      sessionStorage.setItem(`stagewire-finish-${callId}`, JSON.stringify({
+        actualStart: workday.call?.actualStart ?? null,
+        arrivalAt: workday.call?.arrivalAt ?? null,
+        expenseAmount: workday.call?.expenseAmount ?? 0,
+        notes: Array.isArray(workday.notes) ? workday.notes.map((note: { text?: string }) => note.text).filter(Boolean) : [],
+      }));
+    }
+  } catch (error) {
+    console.warn('Could not preload the StageWire workday for closeout.', error);
+  }
+
+  window.location.assign(`${import.meta.env.BASE_URL}finish?call=${callId}`);
 });
 
 createRoot(document.getElementById('root')!, {
