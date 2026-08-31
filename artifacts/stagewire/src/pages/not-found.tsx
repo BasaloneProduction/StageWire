@@ -1,11 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 import ActiveCallPage from '@/pages/active-call';
+import SmartFinishCallPage from '@/pages/smart-finish-call';
 
 export default function NotFound() {
-  // V1.4 bridge: the current app router still lives in the legacy single-file
-  // App.tsx. Keep that stable while we extract screens, but make the new
-  // worker-first Active Call route live immediately.
+  // V1.4 bridge: keep the legacy router stable while worker-first screens are
+  // extracted into focused page modules.
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const appPath = base && window.location.pathname.startsWith(base)
     ? window.location.pathname.slice(base.length) || '/'
@@ -13,6 +13,10 @@ export default function NotFound() {
 
   if (/^\/workday\/\d+\/?$/.test(appPath)) {
     return <ActiveCallPage />;
+  }
+
+  if (/^\/closeout\/\d+\/?$/.test(appPath)) {
+    return <SmartFinishCallPage />;
   }
 
   return (
