@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 import ActiveCallPage from '@/pages/active-call';
 import SmartFinishCallPage from '@/pages/smart-finish-call';
+import WorkReceiptPage from '@/pages/work-receipt';
 
 export default function NotFound() {
   // V1.4 bridge: keep the legacy router stable while worker-first screens are
@@ -17,6 +18,10 @@ export default function NotFound() {
 
   if (/^\/closeout\/\d+\/?$/.test(appPath)) {
     return <SmartFinishCallPage />;
+  }
+
+  if (/^\/receipt\/\d+\/?$/.test(appPath)) {
+    return <WorkReceiptPage />;
   }
 
   return (
