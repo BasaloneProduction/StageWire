@@ -4,10 +4,9 @@ import ActiveCallPage from '@/pages/active-call';
 import SmartFinishCallPage from '@/pages/smart-finish-call';
 import WorkReceiptPage from '@/pages/work-receipt';
 import WorkerVaultPage from '@/pages/worker-vault';
+import CareerPassportV14Page from '@/pages/career-passport-v14';
 
 export default function NotFound() {
-  // V1.4 bridge: keep the legacy router stable while worker-first screens are
-  // extracted into focused page modules.
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const appPath = base && window.location.pathname.startsWith(base)
     ? window.location.pathname.slice(base.length) || '/'
@@ -17,6 +16,7 @@ export default function NotFound() {
   if (/^\/closeout\/\d+\/?$/.test(appPath)) return <SmartFinishCallPage />;
   if (/^\/receipt\/\d+\/?$/.test(appPath)) return <WorkReceiptPage />;
   if (/^\/vault-v14\/?$/.test(appPath)) return <WorkerVaultPage />;
+  if (/^\/passport-v14\/?$/.test(appPath)) return <CareerPassportV14Page />;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
