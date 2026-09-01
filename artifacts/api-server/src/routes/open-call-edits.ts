@@ -123,15 +123,16 @@ router.patch("/calls/:id/details", async (req, res) => {
     if (changed.length === 0) return res.json({ id, updated: false, changed: [] });
 
     const roleChanged = Boolean(patch.role && patch.role !== current.role);
-    const updated = (await db.update(calls).set(patch).where(eq(calls.id, id)).returning())[0];
+    await db.transaction(async (tx) => {
+      const updated = (await tx.update(calls).set(patch).where(eq(calls.id, id)).returning())[0];
+      if (!roleChanged) return;
 
-    if (roleChanged) {
-      await db.delete(callChecklistItems).where(and(eq(callChecklistItems.callId, id), eq(callChecklistItems.isSuggested, true)));
-      const remaining = await db.select().from(callChecklistItems).where(eq(callChecklistItems.callId, id));
+      await tx.delete(callChecklistItems).where(and(eq(callChecklistItems.callId, id), eq(callChecklistItems.isSuggested, true)));
+      const remaining = await tx.select().from(callChecklistItems).where(eq(callChecklistItems.callId, id));
       const startOrder = remaining.reduce((max, item) => Math.max(max, item.sortOrder), -1) + 1;
       const suggestions = roleChecklistSuggestions[updated.role] ?? [];
       if (suggestions.length > 0) {
-        await db.insert(callChecklistItems).values(suggestions.map((label, index) => ({
+        await tx.insert(callChecklistItems).values(suggestions.map((label, index) => ({
           callId: id,
           label,
           checked: false,
@@ -140,7 +141,7 @@ router.patch("/calls/:id/details", async (req, res) => {
           sortOrder: startOrder + index,
         })));
       }
-    }
+    });
 
     return res.json({ id, updated: true, changed });
   } catch {
@@ -157,10 +158,12 @@ router.delete("/calls/:id", async (req, res) => {
     return res.status(409).json({ error: "Only a future call with no arrival or paid-work record can be removed. Active and finished work stays in StageWire." });
   }
 
-  await db.delete(callChecklistItems).where(eq(callChecklistItems.callId, id));
-  await db.delete(callNotes).where(eq(callNotes.callId, id));
-  await db.delete(callExpenses).where(eq(callExpenses.callId, id));
-  await db.delete(calls).where(eq(calls.id, id));
+  await db.transaction(async (tx) => {
+    await tx.delete(callChecklistItems).where(eq(callChecklistItems.callId, id));
+    await tx.delete(callNotes).where(eq(callNotes.callId, id));
+    await tx.delete(callExpenses).where(eq(callExpenses.callId, id));
+    await tx.delete(calls).where(eq(calls.id, id));
+  });
   return res.json({ id, removed: true });
 });
 
