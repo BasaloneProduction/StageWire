@@ -13,6 +13,8 @@ import {
   type FinishCallInput,
 } from '@workspace/api-client-react';
 
+type CloseoutDraft = Record<string, string>;
+
 function localDateTime() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
@@ -38,6 +40,22 @@ function hoursBetween(start: string, end: string, breakMinutes: number) {
   return Math.max(0, (endMs - startMs) / 3_600_000 - Math.max(0, breakMinutes) / 60);
 }
 
+function readDraft(callId: number): CloseoutDraft {
+  if (!Number.isFinite(callId) || callId <= 0) return {};
+  try {
+    const value = JSON.parse(sessionStorage.getItem(`stagewire-finish-${callId}`) || '{}');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+function formDraft(form: HTMLFormElement): CloseoutDraft {
+  const draft: CloseoutDraft = {};
+  new FormData(form).forEach((value, key) => { draft[key] = String(value); });
+  return draft;
+}
+
 export default function SmartFinishCallPage() {
   const { id } = useParams<{ id: string }>();
   const callId = Number(id);
@@ -45,15 +63,16 @@ export default function SmartFinishCallPage() {
   const [, setLocation] = useLocation();
   const workday = useGetCallWorkday(callId);
   const finish = useFinishCall();
+  const [draft] = useState<CloseoutDraft>(() => readDraft(callId));
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [previewStart, setPreviewStart] = useState('');
-  const [previewEnd, setPreviewEnd] = useState(localDateTime());
-  const [previewBreak, setPreviewBreak] = useState(0);
+  const [previewStart, setPreviewStart] = useState(() => draft.actualStart || '');
+  const [previewEnd, setPreviewEnd] = useState(() => draft.actualEnd || localDateTime());
+  const [previewBreak, setPreviewBreak] = useState(() => Number(draft.breakMinutes || 0));
   const [previewInitialized, setPreviewInitialized] = useState(false);
 
   const data = workday.data;
   const call = data?.call;
-  const initialStart = toLocalInput(call?.actualStart);
+  const initialStart = draft.actualStart || toLocalInput(call?.actualStart);
   const expenseTotal = useMemo(() => data?.expenses.reduce((sum, item) => sum + item.amount, 0) ?? 0, [data]);
   const notes = data?.notes ?? [];
   const checklistDone = data?.checklist.items.filter((item) => item.checked).length ?? 0;
@@ -62,10 +81,10 @@ export default function SmartFinishCallPage() {
 
   useEffect(() => {
     if (!call || previewInitialized) return;
-    setPreviewStart(toLocalInput(call.actualStart));
-    setPreviewBreak(call.breakMinutes || 0);
+    if (!previewStart) setPreviewStart(toLocalInput(call.actualStart));
+    if (!draft.breakMinutes) setPreviewBreak(call.breakMinutes || 0);
     setPreviewInitialized(true);
-  }, [call, previewInitialized]);
+  }, [call, draft.breakMinutes, previewInitialized, previewStart]);
 
   if (!Number.isFinite(callId) || callId <= 0) {
     return <div className="page-wrap"><div className="error-box"><strong>Invalid call.</strong></div></div>;
@@ -78,6 +97,10 @@ export default function SmartFinishCallPage() {
   if (workday.isError || !data || !call) {
     return <div className="page-wrap"><div className="error-box"><AlertCircle size={20} /><strong>Could not load this call for closeout.</strong><button className="btn btn-quiet" onClick={() => workday.refetch()}>Try again</button></div></div>;
   }
+
+  const saveDraft = (event: FormEvent<HTMLFormElement>) => {
+    try { sessionStorage.setItem(`stagewire-finish-${callId}`, JSON.stringify(formDraft(event.currentTarget))); } catch {}
+  };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -167,8 +190,9 @@ export default function SmartFinishCallPage() {
         </div>
       </div>
 
-      <form className="card card-pad form-card" onSubmit={submit}>
+      <form className="card card-pad form-card" onSubmit={submit} onInput={saveDraft}>
         <div className="eyebrow">Confirm the closeout</div>
+        <div className="privacy-rule" style={{ marginTop: 14 }}><ShieldCheck size={18} /><span>Your unfinished closeout is kept in this browser tab session so a refresh does not wipe what you just typed. The draft is cleared when the receipt locks.</span></div>
         <div className="form-grid" style={{ marginTop: 18 }}>
           <div className="field">
             <label htmlFor="actualStart">Paid start</label>
@@ -177,51 +201,51 @@ export default function SmartFinishCallPage() {
           </div>
           <div className="field">
             <label htmlFor="actualEnd">Actual end</label>
-            <input id="actualEnd" name="actualEnd" type="datetime-local" required defaultValue={previewEnd} onChange={(e) => setPreviewEnd(e.target.value)} />
+            <input id="actualEnd" name="actualEnd" type="datetime-local" required defaultValue={draft.actualEnd || previewEnd} onChange={(e) => setPreviewEnd(e.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="breakMinutes">Break minutes</label>
-            <input id="breakMinutes" name="breakMinutes" type="number" min="0" step="1" defaultValue={call.breakMinutes || 0} onChange={(e) => setPreviewBreak(Number(e.target.value || 0))} />
+            <input id="breakMinutes" name="breakMinutes" type="number" min="0" step="1" defaultValue={draft.breakMinutes || call.breakMinutes || 0} onChange={(e) => setPreviewBreak(Number(e.target.value || 0))} />
           </div>
           <div className="field">
             <label htmlFor="role">Final role check</label>
-            <input id="role" name="role" defaultValue={call.role} required />
+            <input id="role" name="role" defaultValue={draft.role || call.role} required />
           </div>
           <div className="field">
             <label htmlFor="mileage">Mileage</label>
-            <input id="mileage" name="mileage" type="number" min="0" step="0.1" defaultValue={call.mileage || 0} />
+            <input id="mileage" name="mileage" type="number" min="0" step="0.1" defaultValue={draft.mileage || call.mileage || 0} />
           </div>
           <div className="field">
             <label htmlFor="parkingExpense">Last-minute parking</label>
-            <input id="parkingExpense" name="parkingExpense" type="number" min="0" step="0.01" defaultValue="0" />
+            <input id="parkingExpense" name="parkingExpense" type="number" min="0" step="0.01" defaultValue={draft.parkingExpense || '0'} />
           </div>
           <div className="field">
             <label htmlFor="tollExpense">Last-minute toll</label>
-            <input id="tollExpense" name="tollExpense" type="number" min="0" step="0.01" defaultValue="0" />
+            <input id="tollExpense" name="tollExpense" type="number" min="0" step="0.01" defaultValue={draft.tollExpense || '0'} />
           </div>
           <div className="field">
             <label htmlFor="additionalExpenseAmount">Other last expense</label>
-            <input id="additionalExpenseAmount" name="additionalExpenseAmount" type="number" min="0" step="0.01" defaultValue="0" />
+            <input id="additionalExpenseAmount" name="additionalExpenseAmount" type="number" min="0" step="0.01" defaultValue={draft.additionalExpenseAmount || '0'} />
           </div>
           <div className="field">
             <label htmlFor="additionalExpenseCategory">Expense category</label>
-            <select id="additionalExpenseCategory" name="additionalExpenseCategory" defaultValue="Other"><option>Other</option><option>Meal</option><option>Transportation</option><option>Supplies</option><option>Lodging</option></select>
+            <select id="additionalExpenseCategory" name="additionalExpenseCategory" defaultValue={draft.additionalExpenseCategory || 'Other'}><option>Other</option><option>Meal</option><option>Transportation</option><option>Supplies</option><option>Lodging</option></select>
           </div>
           <div className="field">
             <label htmlFor="additionalExpenseDescription">Expense detail</label>
-            <input id="additionalExpenseDescription" name="additionalExpenseDescription" placeholder="Only if you added an expense" />
+            <input id="additionalExpenseDescription" name="additionalExpenseDescription" defaultValue={draft.additionalExpenseDescription || ''} placeholder="Only if you added an expense" />
           </div>
           <div className="field full">
             <label htmlFor="finalNote">Final note</label>
-            <textarea id="finalNote" name="finalNote" placeholder="Optional closeout note. Your earlier workday notes are already saved." />
+            <textarea id="finalNote" name="finalNote" defaultValue={draft.finalNote || ''} placeholder="Optional closeout note. Your earlier workday notes are already saved." />
           </div>
           <div className="field">
             <label htmlFor="receiptAttachmentName">Receipt attachment</label>
-            <input id="receiptAttachmentName" name="receiptAttachmentName" placeholder="Optional filename for now" />
+            <input id="receiptAttachmentName" name="receiptAttachmentName" defaultValue={draft.receiptAttachmentName || ''} placeholder="Optional filename for now" />
           </div>
           <div className="field">
             <label htmlFor="workPhotoName">Work photo</label>
-            <input id="workPhotoName" name="workPhotoName" placeholder="Optional filename for now" />
+            <input id="workPhotoName" name="workPhotoName" defaultValue={draft.workPhotoName || ''} placeholder="Optional filename for now" />
           </div>
         </div>
 
