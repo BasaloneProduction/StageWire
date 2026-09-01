@@ -15,6 +15,13 @@ function appPath(pathname: string) {
   return base && pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
 }
 
+function skipToMain() {
+  const main = document.querySelector<HTMLElement>('main.main-area');
+  if (!main) return;
+  main.tabIndex = -1;
+  main.focus();
+}
+
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -54,6 +61,7 @@ createRoot(document.getElementById('root')!, {
   },
 }).render(
   <ErrorBoundary>
+    <button className="skip-link print-hide" type="button" onClick={skipToMain}>Skip to main content</button>
     <div className="preview-safety-notice print-hide" role="note" aria-label="Preview safety notice">
       <strong>Preview build — no worker accounts yet.</strong>
       <span>Do not enter real personal, financial, or credential data on a shared or public deployment. Authentication and cross-device identity are still being built.</span>
