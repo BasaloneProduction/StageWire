@@ -11,6 +11,14 @@ import './accessibility.css';
 
 installDemoApi();
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}stagewire-sw.js`, { scope: import.meta.env.BASE_URL })
+      .catch((error) => console.warn('StageWire offline shell could not be registered.', error));
+  });
+}
+
 function appPath(pathname: string) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   return base && pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
