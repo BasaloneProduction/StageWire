@@ -8,24 +8,32 @@ function cleanIdentityPart(value: string, label: string) {
   return clean;
 }
 
+export async function workerIdentityForVerifiedSubject(provider: string, subject: string) {
+  const cleanProvider = cleanIdentityPart(provider, "identity provider");
+  const cleanSubject = cleanIdentityPart(subject, "identity subject");
+  return (
+    await db
+      .select({
+        id: workerIdentities.id,
+        ownerKey: workerIdentities.ownerKey,
+        provider: workerIdentities.provider,
+        subject: workerIdentities.subject,
+      })
+      .from(workerIdentities)
+      .where(and(eq(workerIdentities.provider, cleanProvider), eq(workerIdentities.subject, cleanSubject)))
+      .limit(1)
+  )[0] ?? null;
+}
+
 export async function authenticatedPrincipalForIdentity(
   provider: string,
   subject: string,
 ): Promise<WorkerPrincipal | null> {
-  const cleanProvider = cleanIdentityPart(provider, "identity provider");
-  const cleanSubject = cleanIdentityPart(subject, "identity subject");
-  const row = (
-    await db
-      .select({ ownerKey: workerIdentities.ownerKey })
-      .from(workerIdentities)
-      .where(and(eq(workerIdentities.provider, cleanProvider), eq(workerIdentities.subject, cleanSubject)))
-      .limit(1)
-  )[0];
-
+  const row = await workerIdentityForVerifiedSubject(provider, subject);
   if (!row) return null;
   return {
     kind: "authenticated",
     ownerKey: row.ownerKey,
-    subject: `${cleanProvider}:${cleanSubject}`,
+    subject: `${row.provider}:${row.subject}`,
   };
 }
