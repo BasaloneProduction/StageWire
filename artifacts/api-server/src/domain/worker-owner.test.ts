@@ -17,7 +17,7 @@ const openCallRoutes = fs.readFileSync(new URL("../routes/open-call-edits.ts", i
 
 test("worker-backed tables keep explicit owner boundaries", () => {
   const ownerColumns = schema.match(/ownerKey:\s*text\("owner_key"\)/g) ?? [];
-  assert.equal(ownerColumns.length, 4, "profiles, identities, sessions, and calls must keep owner keys");
+  assert.equal(ownerColumns.length, 5, "profiles, identities, sessions, credentials, and calls must keep owner keys");
   assert.doesNotMatch(
     schema,
     /ownerKey:\s*text\("owner_key"\)\.notNull\(\)\.default\("preview-worker-v14"\)/,
@@ -26,7 +26,9 @@ test("worker-backed tables keep explicit owner boundaries", () => {
   assert.match(schema, /worker_profiles_owner_key_unique/, "each owner must have one worker profile");
   assert.match(schema, /worker_identities_provider_subject_unique/, "one external identity must map to only one StageWire owner");
   assert.match(schema, /worker_sessions_identity_id_idx/, "sessions must stay tied to their verified identity");
-  assert.match(schema, /references\(\(\) => workerProfiles\.ownerKey/, "identity/session ownership must point to a real StageWire worker profile");
+  assert.match(schema, /worker_credentials_owner_key_idx/, "credential lookups must stay worker-scoped and indexed");
+  assert.match(schema, /worker_credentials_status_check/, "credential persisted status must stay limited to current or planned");
+  assert.match(schema, /references\(\(\) => workerProfiles\.ownerKey/, "worker-owned records must point to a real StageWire worker profile");
   assert.match(schema, /calls_owner_key_idx/, "owner-scoped call lookup must stay indexed");
 });
 
