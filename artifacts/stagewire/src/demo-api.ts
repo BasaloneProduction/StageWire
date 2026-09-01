@@ -142,6 +142,17 @@ function defaultChecklist(callId: number, role: string, state: DemoState) {
   }));
 }
 
+function replaceRoleSuggestions(callId: number, role: string, state: DemoState) {
+  const kept = (state.checklist[callId] || []).filter((item) => !item.isSuggested);
+  const startOrder = kept.reduce((max, item) => Math.max(max, Number(item.sortOrder || 0)), -1) + 1;
+  const suggestions = (roleChecklistSuggestions[role] || []).map((label, index) => ({
+    id: state.nextItemId++, callId, label, checked: false,
+    isCustom: false, isSuggested: true, sortOrder: startOrder + index,
+    createdAt: new Date().toISOString(),
+  }));
+  state.checklist[callId] = [...kept, ...suggestions];
+}
+
 function dashboard(state: DemoState) {
   const finished = state.calls.filter((c) => c.status === 'finished');
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -224,6 +235,19 @@ export function installDemoApi() {
     if (tail === 'workday' && method === 'GET') {
       const newestFirst = (items: any[]) => [...items].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       return json({ call, checklist: { items: state.checklist[id] || [] }, notes: newestFirst(state.notes[id] || []), expenses: newestFirst(state.expenses[id] || []) });
+    }
+
+    if (tail === 'details' && method === 'PATCH') {
+      if (call.status === 'finished') return json({ error: 'This Call Receipt is locked. Use Correct record for audited changes.' }, 409);
+      const data = body(init);
+      if (call.actualStart && data.role && data.role !== call.role) return json({ error: 'Paid work has already started. Keep the live role stable and use Final role check when you finish the call.' }, 409);
+      const changed = Object.keys(data).filter((key) => String(call[key] ?? '') !== String(data[key] ?? ''));
+      if (changed.length === 0) return json({ id, updated: false, changed: [] });
+      const roleChanged = Boolean(data.role && data.role !== call.role);
+      Object.assign(call, data);
+      if (roleChanged) replaceRoleSuggestions(id, call.role, state);
+      save(state);
+      return json({ id, updated: true, changed });
     }
 
     const expenseCorrectionMatch = tail.match(/^expenses\/(\d+)\/correct$/);
