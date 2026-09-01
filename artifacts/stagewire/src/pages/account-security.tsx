@@ -4,7 +4,6 @@ import { KeyRound, Link2, LogOut, RefreshCw, ShieldCheck, Trash2 } from 'lucide-
 type SessionState = { authenticated: boolean };
 type LinkedIdentity = { id: number; provider: string; createdAt: string };
 type IdentityList = { identities: LinkedIdentity[] };
-
 type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; message: string };
 
 async function api<T>(path: string, options?: RequestInit): Promise<ApiResult<T>> {
@@ -35,7 +34,7 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
 
-export default function AccountSecurityPage() {
+export function AccountSecurityPanel() {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [identities, setIdentities] = useState<LinkedIdentity[]>([]);
@@ -106,33 +105,32 @@ export default function AccountSecurityPage() {
     await load();
   };
 
-  return <div className="page-wrap">
-    <div className="page-heading">
-      <div><div className="eyebrow">Worker account</div><h1 style={{ marginTop: 10 }}>Account &amp; Security</h1><p className="subtitle">Your sign-ins and sessions should protect the worker record without ever exposing StageWire's internal owner ID.</p></div>
-      <span className="badge badge-finished"><ShieldCheck size={16} /> Private account controls</span>
-    </div>
+  return <section id="account-security" className="setup-section" aria-labelledby="account-security-title">
+    <div className="setup-section-head"><span className="setup-step"><ShieldCheck size={18} /></span><div><div className="eyebrow">Account &amp; security</div><h2 id="account-security-title">Protect the worker record.</h2><p className="subtitle">Sign-ins and sessions should belong to you without exposing StageWire's internal owner ID.</p></div></div>
 
     {message && <div className="success-box" role="status"><ShieldCheck size={20} /> {message}</div>}
     {error && <div className="error-box" role="alert"><KeyRound size={20} /><div><strong>Account action did not finish.</strong><p>{error}</p></div></div>}
 
-    {available === null && <section className="card card-pad"><div className="eyebrow">Checking account layer</div><p className="subtitle" style={{ marginTop: 8 }}>StageWire is checking whether authenticated account controls are enabled on this build.</p></section>}
+    {available === null && <div className="card card-pad"><div className="eyebrow">Checking account layer</div><p className="help-text" style={{ marginTop: 8 }}>StageWire is checking whether authenticated account controls are enabled on this build.</p></div>}
 
-    {available === false && <section className="card card-pad"><div className="eyebrow">Preview build</div><h2 style={{ marginTop: 7 }}>Real worker login is intentionally not mounted yet.</h2><p className="subtitle">The account and session backend is built, but this preview stays blocked from pretending to be secure until a real identity provider verifies the worker. Do not enter real sensitive information into a shared preview.</p><div className="form-actions" style={{ marginTop: 18 }}><button className="btn btn-secondary" onClick={() => void load()}><RefreshCw size={18} /> Check again</button></div></section>}
+    {available === false && <div className="card card-pad"><div className="eyebrow">Preview build</div><h3 style={{ marginTop: 7 }}>Real worker login is intentionally not mounted yet.</h3><p className="help-text">The account/session backend is built, but this preview stays blocked from pretending to be secure until a real identity provider verifies the worker. Do not enter real sensitive information into a shared preview.</p><div className="form-actions" style={{ marginTop: 14 }}><button type="button" className="btn btn-secondary" onClick={() => void load()}><RefreshCw size={18} /> Check again</button></div></div>}
 
-    {available === true && !authenticated && <section className="card card-pad"><div className="eyebrow">Signed out</div><h2 style={{ marginTop: 7 }}>No StageWire session is active.</h2><p className="subtitle">Sign-in buttons will come from the verified identity provider when production authentication is mounted. StageWire will not accept an owner ID from the browser as a shortcut.</p></section>}
+    {available === true && !authenticated && <div className="card card-pad"><div className="eyebrow">Signed out</div><h3 style={{ marginTop: 7 }}>No StageWire session is active.</h3><p className="help-text">Sign-in buttons will come from the verified identity provider when production authentication is mounted. StageWire will not accept an owner ID from the browser as a shortcut.</p></div>}
 
-    {available === true && authenticated && <>
-      <section className="card card-pad">
-        <div className="eyebrow">Linked sign-ins</div><h2 style={{ marginTop: 7 }}>Ways you can get back into StageWire</h2><p className="subtitle">You can remove a linked login only when another login remains. StageWire refuses to strand the worker by deleting the final sign-in method.</p>
-        <div className="experience-list" style={{ marginTop: 18 }}>
-          {identities.map((identity) => <div className="experience-row" key={identity.id}><span><b><Link2 size={16} style={{ verticalAlign: '-3px', marginRight: 7 }} />{providerLabel(identity.provider)}</b><small>Linked {dateLabel(identity.createdAt)}</small></span><button className="btn btn-quiet" disabled={identities.length <= 1 || busy === `identity-${identity.id}`} onClick={() => void unlink(identity)}>{busy === `identity-${identity.id}` ? 'Removing…' : <><Trash2 size={16} /> Remove</>}</button></div>)}
-        </div>
-        {identities.length <= 1 && <p className="help-text" style={{ marginTop: 14 }}>This is your only login method, so StageWire keeps it linked.</p>}
-      </section>
+    {available === true && authenticated && <div className="account-security-grid">
+      <div className="card card-pad">
+        <div className="eyebrow">Linked sign-ins</div><h3 style={{ marginTop: 7 }}>Ways you can get back into StageWire</h3><p className="help-text">You can remove a linked login only when another login remains.</p>
+        <div className="experience-list" style={{ marginTop: 16 }}>{identities.map((identity) => <div className="experience-row" key={identity.id}><span><b><Link2 size={16} style={{ verticalAlign: '-3px', marginRight: 7 }} />{providerLabel(identity.provider)}</b><small>Linked {dateLabel(identity.createdAt)}</small></span><button type="button" className="btn btn-quiet" disabled={identities.length <= 1 || busy === `identity-${identity.id}`} onClick={() => void unlink(identity)}>{busy === `identity-${identity.id}` ? 'Removing…' : <><Trash2 size={16} /> Remove</>}</button></div>)}</div>
+        {identities.length <= 1 && <p className="help-text" style={{ marginTop: 12 }}>This is your only login method, so StageWire keeps it linked.</p>}
+      </div>
 
-      <section className="card card-pad" style={{ marginTop: 22 }}>
-        <div className="eyebrow">Sessions</div><h2 style={{ marginTop: 7 }}>Sign out controls</h2><p className="subtitle">Use this device only for a normal logout. Use sign out everywhere if a phone, laptop, or shared browser is lost or no longer trusted.</p><div className="form-actions" style={{ marginTop: 18 }}><button className="btn btn-secondary" disabled={Boolean(busy)} onClick={() => void signOut(false)}><LogOut size={18} /> {busy === 'device' ? 'Signing out…' : 'Sign out this device'}</button><button className="btn btn-quiet" disabled={Boolean(busy)} onClick={() => { if (window.confirm('Sign out every StageWire session on every device?')) void signOut(true); }}><ShieldCheck size={18} /> {busy === 'everywhere' ? 'Signing out…' : 'Sign out everywhere'}</button></div>
-      </section>
-    </>}
-  </div>;
+      <div className="card card-pad">
+        <div className="eyebrow">Sessions</div><h3 style={{ marginTop: 7 }}>Sign out controls</h3><p className="help-text">Use sign out everywhere if a phone, laptop, or shared browser is lost or no longer trusted.</p><div className="form-actions" style={{ marginTop: 16 }}><button type="button" className="btn btn-secondary" disabled={Boolean(busy)} onClick={() => void signOut(false)}><LogOut size={18} /> {busy === 'device' ? 'Signing out…' : 'Sign out this device'}</button><button type="button" className="btn btn-quiet" disabled={Boolean(busy)} onClick={() => { if (window.confirm('Sign out every StageWire session on every device?')) void signOut(true); }}><ShieldCheck size={18} /> {busy === 'everywhere' ? 'Signing out…' : 'Sign out everywhere'}</button></div>
+      </div>
+    </div>}
+  </section>;
+}
+
+export default function AccountSecurityPage() {
+  return <div className="page-wrap"><div className="page-heading"><div><div className="eyebrow">Worker account</div><h1 style={{ marginTop: 10 }}>Account &amp; Security</h1><p className="subtitle">Your sign-ins and sessions stay tied to your private worker record.</p></div></div><AccountSecurityPanel /></div>;
 }
