@@ -28,6 +28,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build shared library types
         run: pnpm run typecheck:libs
+      - name: Typecheck API server
+        run: pnpm --dir artifacts/api-server typecheck
+      - name: Build API server
+        run: pnpm --dir artifacts/api-server build
       - name: Typecheck StageWire
         run: pnpm --dir artifacts/stagewire typecheck
       - name: Build StageWire
