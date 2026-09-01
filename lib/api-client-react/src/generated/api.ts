@@ -30,6 +30,9 @@ import type {
   ChecklistItem,
   ChecklistItemInput,
   ChecklistItemUpdateInput,
+  Credential,
+  CredentialInput,
+  CredentialUpdateInput,
   DashboardSummary,
   ErrorResponse,
   ExpenseInput,
@@ -1400,6 +1403,297 @@ export const useAddCallExpense = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAddCallExpenseMutationOptions(options));
+    }
+
+export const getListCredentialsUrl = () => {
+
+
+
+
+  return `/api/credentials`
+}
+
+/**
+ * @summary List the worker credential wallet
+ */
+export const listCredentials = async ( options?: Parameters<typeof customFetch>[1]): Promise<Credential[]> => {
+
+  return customFetch<Credential[]>(getListCredentialsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCredentialsQueryKey = () => {
+    return [
+    `/api/credentials`
+    ] as const;
+    }
+
+
+export const getListCredentialsQueryOptions = <TData = Awaited<ReturnType<typeof listCredentials>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCredentialsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCredentials>>> = ({ signal }) => listCredentials({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCredentials>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCredentialsQueryResult = NonNullable<Awaited<ReturnType<typeof listCredentials>>>
+export type ListCredentialsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the worker credential wallet
+ */
+
+export function useListCredentials<TData = Awaited<ReturnType<typeof listCredentials>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCredentialsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCredentialUrl = () => {
+
+
+
+
+  return `/api/credentials`
+}
+
+/**
+ * @summary Add a worker credential
+ */
+export const createCredential = async (credentialInput: CredentialInput, options?: Parameters<typeof customFetch>[1]): Promise<Credential> => {
+
+  return customFetch<Credential>(getCreateCredentialUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(credentialInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCredentialMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCredential>>, TError,{data: BodyType<CredentialInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCredential>>, TError,{data: BodyType<CredentialInput>}, TContext> => {
+
+const mutationKey = ['createCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCredential>>, {data: BodyType<CredentialInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCredential(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof createCredential>>>
+    export type CreateCredentialMutationBody = BodyType<CredentialInput>
+    export type CreateCredentialMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Add a worker credential
+ */
+export const useCreateCredential = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCredential>>, TError,{data: BodyType<CredentialInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCredential>>,
+        TError,
+        {data: BodyType<CredentialInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCredentialMutationOptions(options));
+    }
+
+export const getUpdateCredentialUrl = (credentialId: number,) => {
+
+
+
+
+  return `/api/credentials/${credentialId}`
+}
+
+/**
+ * @summary Update a worker credential
+ */
+export const updateCredential = async (credentialId: number,
+    credentialUpdateInput: CredentialUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<Credential> => {
+
+  return customFetch<Credential>(getUpdateCredentialUrl(credentialId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(credentialUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCredentialMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCredential>>, TError,{credentialId: number;data: BodyType<CredentialUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCredential>>, TError,{credentialId: number;data: BodyType<CredentialUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCredential>>, {credentialId: number;data: BodyType<CredentialUpdateInput>}> = (props) => {
+          const {credentialId,data} = props ?? {};
+
+          return  updateCredential(credentialId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof updateCredential>>>
+    export type UpdateCredentialMutationBody = BodyType<CredentialUpdateInput>
+    export type UpdateCredentialMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update a worker credential
+ */
+export const useUpdateCredential = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCredential>>, TError,{credentialId: number;data: BodyType<CredentialUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCredential>>,
+        TError,
+        {credentialId: number;data: BodyType<CredentialUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCredentialMutationOptions(options));
+    }
+
+export const getDeleteCredentialUrl = (credentialId: number,) => {
+
+
+
+
+  return `/api/credentials/${credentialId}`
+}
+
+/**
+ * @summary Remove a worker credential
+ */
+export const deleteCredential = async (credentialId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteCredentialUrl(credentialId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCredentialMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCredential>>, TError,{credentialId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCredential>>, TError,{credentialId: number}, TContext> => {
+
+const mutationKey = ['deleteCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCredential>>, {credentialId: number}> = (props) => {
+          const {credentialId} = props ?? {};
+
+          return  deleteCredential(credentialId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCredential>>>
+
+    export type DeleteCredentialMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Remove a worker credential
+ */
+export const useDeleteCredential = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCredential>>, TError,{credentialId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCredential>>,
+        TError,
+        {credentialId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCredentialMutationOptions(options));
     }
 
 export const getGetVaultUrl = () => {

@@ -1092,6 +1092,89 @@ export const AddCallExpenseResponse = zod.object({
 
 
 /**
+ * @summary List the worker credential wallet
+ */
+export const ListCredentialsResponseItem = zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "issuer": zod.string(),
+  "expires": zod.coerce.date().nullable(),
+  "status": zod.enum(['current', 'planned']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListCredentialsResponse = zod.array(ListCredentialsResponseItem)
+
+
+/**
+ * @summary Add a worker credential
+ */
+
+
+
+export const CreateCredentialBody = zod.object({
+  "name": zod.string().min(1),
+  "issuer": zod.string().optional(),
+  "expires": zod.coerce.date().nullish(),
+  "status": zod.enum(['current', 'planned'])
+})
+
+export const CreateCredentialResponse = zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "issuer": zod.string(),
+  "expires": zod.coerce.date().nullable(),
+  "status": zod.enum(['current', 'planned']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a worker credential
+ */
+
+
+
+export const UpdateCredentialParams = zod.object({
+  "credentialId": zod.coerce.number().int().min(1)
+})
+
+
+
+
+export const UpdateCredentialBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "issuer": zod.string().optional(),
+  "expires": zod.coerce.date().nullish(),
+  "status": zod.enum(['current', 'planned']).optional()
+})
+
+export const UpdateCredentialResponse = zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "issuer": zod.string(),
+  "expires": zod.coerce.date().nullable(),
+  "status": zod.enum(['current', 'planned']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Remove a worker credential
+ */
+
+
+
+export const DeleteCredentialParams = zod.object({
+  "credentialId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteCredentialResponse = zod.void()
+
+
+/**
  * @summary Get the worker-owned Vault
  */
 export const getVaultResponseCallsItemMinimumHoursMin = 0;

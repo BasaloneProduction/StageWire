@@ -13,6 +13,59 @@ export interface HealthStatus {
   status: string;
 }
 
+export type CredentialStatus = typeof CredentialStatus[keyof typeof CredentialStatus];
+
+
+export const CredentialStatus = {
+  current: 'current',
+  planned: 'planned',
+} as const;
+
+export interface Credential {
+  id: number;
+  name: string;
+  issuer: string;
+  /** @nullable */
+  expires: string | null;
+  status: CredentialStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CredentialInputStatus = typeof CredentialInputStatus[keyof typeof CredentialInputStatus];
+
+
+export const CredentialInputStatus = {
+  current: 'current',
+  planned: 'planned',
+} as const;
+
+export interface CredentialInput {
+  /** @minLength 1 */
+  name: string;
+  issuer?: string;
+  /** @nullable */
+  expires?: string | null;
+  status: CredentialInputStatus;
+}
+
+export type CredentialUpdateInputStatus = typeof CredentialUpdateInputStatus[keyof typeof CredentialUpdateInputStatus];
+
+
+export const CredentialUpdateInputStatus = {
+  current: 'current',
+  planned: 'planned',
+} as const;
+
+export interface CredentialUpdateInput {
+  /** @minLength 1 */
+  name?: string;
+  issuer?: string;
+  /** @nullable */
+  expires?: string | null;
+  status?: CredentialUpdateInputStatus;
+}
+
 export interface WorkerProfile {
   id: number;
   displayName: string;

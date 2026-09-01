@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: profile
     description: Worker profile operations
+  - name: learning
+    description: Worker-owned credential operations
   - name: calls
     description: Work call operations
   - name: vault
@@ -374,6 +376,102 @@ paths:
               schema:
                 $ref: "#/components/schemas/CallExpense"
 
+  /credentials:
+    get:
+      operationId: listCredentials
+      tags: [learning]
+      summary: List the worker credential wallet
+      responses:
+        "200":
+          description: Worker credentials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Credential"
+    post:
+      operationId: createCredential
+      tags: [learning]
+      summary: Add a worker credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialInput"
+      responses:
+        "201":
+          description: Created credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        "400":
+          description: Invalid credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /credentials/{credentialId}:
+    patch:
+      operationId: updateCredential
+      tags: [learning]
+      summary: Update a worker credential
+      parameters:
+        - name: credentialId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialUpdateInput"
+      responses:
+        "200":
+          description: Updated credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        "400":
+          description: Invalid credential update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Credential not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteCredential
+      tags: [learning]
+      summary: Remove a worker credential
+      parameters:
+        - name: credentialId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: Credential removed
+        "404":
+          description: Credential not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /vault:
     get:
       operationId: getVault
@@ -431,6 +529,56 @@ components:
         status:
           type: string
       required: [status]
+    Credential:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        issuer:
+          type: string
+        expires:
+          type: ["string", "null"]
+          format: date
+        status:
+          type: string
+          enum: [current, planned]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, name, issuer, expires, status, createdAt, updatedAt]
+    CredentialInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        issuer:
+          type: string
+        expires:
+          type: ["string", "null"]
+          format: date
+        status:
+          type: string
+          enum: [current, planned]
+      required: [name, status]
+    CredentialUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        issuer:
+          type: string
+        expires:
+          type: ["string", "null"]
+          format: date
+        status:
+          type: string
+          enum: [current, planned]
+
     WorkerProfile:
       type: object
       properties:
