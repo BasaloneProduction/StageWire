@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import {
   AddCallExpenseBody,
   AddCallNoteBody,
@@ -38,6 +38,7 @@ import {
   UpdateChecklistItemResponse,
 } from "@workspace/api-zod";
 import { db, callChecklistItems, callExpenses, callNotes, calls, workerProfiles } from "@workspace/db";
+import { PREVIEW_OWNER_KEY, ownedCallWhere, ownedCallsWhere, ownedProfileWhere } from "../domain/worker-owner";
 
 const router: IRouter = Router();
 
@@ -210,7 +211,7 @@ function callWithTotals(call: typeof calls.$inferSelect) {
 }
 
 async function getCall(id: number) {
-  return (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  return (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
 }
 
 async function ensureChecklist(callId: number, role: string) {
@@ -247,9 +248,10 @@ async function workdayForCall(call: typeof calls.$inferSelect) {
 async function ensureSeedData() {
   if (seeded) return;
 
-  const existingProfile = await db.select({ id: workerProfiles.id }).from(workerProfiles).limit(1);
+  const existingProfile = await db.select({ id: workerProfiles.id }).from(workerProfiles).where(ownedProfileWhere()).limit(1);
   if (existingProfile.length === 0) {
     await db.insert(workerProfiles).values({
+      ownerKey: PREVIEW_OWNER_KEY,
       displayName: "StageWire Worker",
       homeCityState: "New York, NY",
       primaryRole: "Stagehand",
@@ -262,10 +264,11 @@ async function ensureSeedData() {
     });
   }
 
-  const existingCall = await db.select({ id: calls.id }).from(calls).limit(1);
+  const existingCall = await db.select({ id: calls.id }).from(calls).where(ownedCallsWhere()).limit(1);
   if (existingCall.length === 0) {
     await db.insert(calls).values([
       {
+        ownerKey: PREVIEW_OWNER_KEY,
         venue: "Demo Arena",
         showName: "Concert Load-In",
         workDate: "2026-09-02",
@@ -275,6 +278,7 @@ async function ensureSeedData() {
         hourlyRate: 32,
       },
       {
+        ownerKey: PREVIEW_OWNER_KEY,
         venue: "Downtown Theatre",
         showName: "Touring Broadway Load-Out",
         workDate: "2026-08-29",
@@ -295,7 +299,7 @@ async function ensureSeedData() {
 
 router.get("/dashboard", async (_req, res) => {
   await ensureSeedData();
-  const rows = await db.select().from(calls);
+  const rows = await db.select().from(calls).where(ownedCallsWhere());
   const completed = rows.filter((call) => call.status === "finished").map(callWithTotals);
   const upcoming = rows
     .filter((call) => call.status === "upcoming")
@@ -319,7 +323,7 @@ router.get("/dashboard", async (_req, res) => {
 
 router.get("/profile", async (_req, res) => {
   await ensureSeedData();
-  const profile = (await db.select().from(workerProfiles).orderBy(asc(workerProfiles.id)).limit(1))[0];
+  const profile = (await db.select().from(workerProfiles).where(ownedProfileWhere()).orderBy(asc(workerProfiles.id)).limit(1))[0];
   res.json(GetProfileResponse.parse(profile));
 });
 
@@ -330,7 +334,7 @@ router.put("/profile", async (req, res) => {
     if (!input.displayName.trim()) return res.status(400).json({ error: "Add a display name so your profile is easy to recognize." });
     if (!input.primaryRole.trim()) return res.status(400).json({ error: "Choose your primary role." });
 
-    const current = (await db.select().from(workerProfiles).orderBy(asc(workerProfiles.id)).limit(1))[0];
+    const current = (await db.select().from(workerProfiles).where(ownedProfileWhere()).orderBy(asc(workerProfiles.id)).limit(1))[0];
     const updated = (
       await db
         .update(workerProfiles)
@@ -349,7 +353,7 @@ router.put("/profile", async (req, res) => {
           profilePhotoName: input.profilePhotoName === undefined ? current.profilePhotoName : asNullable(input.profilePhotoName),
           privateByDefault: true,
         })
-        .where(eq(workerProfiles.id, current.id))
+        .where(and(eq(workerProfiles.id, current.id), ownedProfileWhere()))
         .returning()
     )[0];
     return res.json(UpdateProfileResponse.parse(updated));
@@ -360,7 +364,7 @@ router.put("/profile", async (req, res) => {
 
 router.get("/calls", async (_req, res) => {
   await ensureSeedData();
-  const rows = await db.select().from(calls).orderBy(desc(calls.workDate), desc(calls.id));
+  const rows = await db.select().from(calls).where(ownedCallsWhere()).orderBy(desc(calls.workDate), desc(calls.id));
   res.json(ListCallsResponse.parse(rows.map(callWithTotals)));
 });
 
@@ -372,6 +376,7 @@ router.post("/calls", async (req, res) => {
       await db
         .insert(calls)
         .values({
+          ownerKey: PREVIEW_OWNER_KEY,
           venue: input.venue.trim(),
           venueAddress: asNullable(input.venueAddress),
           showName: input.showName.trim(),
@@ -418,7 +423,7 @@ router.get("/calls/:id", async (req, res) => {
   await ensureSeedData();
   try {
     const { id } = GetCallParams.parse(req.params);
-    const call = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+    const call = (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
     if (!call) return res.status(404).json({ error: "Call not found." });
     return res.json(callWithTotals(call));
   } catch (error) {
@@ -431,7 +436,7 @@ router.post("/calls/:id/finish", async (req, res) => {
   try {
     const { id } = FinishCallParams.parse(req.params);
     const input = FinishCallBody.parse(req.body);
-    const existing = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+    const existing = (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
     if (!existing) return res.status(404).json({ error: "Call not found." });
     if (existing.status === "finished") return res.status(409).json({ error: "This call is already finished. Its receipt is safely kept in The Vault." });
 
@@ -487,7 +492,7 @@ router.post("/calls/:id/finish", async (req, res) => {
           status: "finished",
           completedAt: new Date().toISOString(),
         })
-        .where(eq(calls.id, id))
+        .where(ownedCallWhere(id))
         .returning()
     )[0];
     return res.json(callWithTotals(updated));
@@ -519,7 +524,7 @@ router.post("/calls/:id/arrive", async (req, res) => {
     const updated = (await db.update(calls).set({
       arrivalAt: input.arrivalAt,
       status: existing.status === "upcoming" ? "arrived" : existing.status,
-    }).where(eq(calls.id, id)).returning())[0];
+    }).where(ownedCallWhere(id)).returning())[0];
     await ensureChecklist(id, updated.role);
     return res.json(ArriveAtCallResponse.parse(callWithTotals(updated)));
   } catch (error) {
@@ -539,7 +544,7 @@ router.post("/calls/:id/start", async (req, res) => {
     const updated = (await db.update(calls).set({
       actualStart: input.actualStart,
       status: "active",
-    }).where(eq(calls.id, id)).returning())[0];
+    }).where(ownedCallWhere(id)).returning())[0];
     return res.json(StartCallWorkResponse.parse(callWithTotals(updated)));
   } catch (error) {
     return res.status(400).json({ error: errorMessage(error, "Enter a valid paid work start time.") });
@@ -658,7 +663,7 @@ router.post("/calls/:id/expenses", async (req, res) => {
       expenseAmount: Number(((call.expenseAmount + input.amount)).toFixed(2)),
       parkingExpense: category === "parking" ? Number((call.parkingExpense + input.amount).toFixed(2)) : call.parkingExpense,
       tollExpense: category === "toll" ? Number((call.tollExpense + input.amount).toFixed(2)) : call.tollExpense,
-    }).where(eq(calls.id, id));
+    }).where(ownedCallWhere(id));
     return res.status(201).json(AddCallExpenseResponse.parse(expense));
   } catch (error) {
     return res.status(400).json({ error: errorMessage(error, "Add an amount and category before saving the expense.") });
@@ -667,8 +672,8 @@ router.post("/calls/:id/expenses", async (req, res) => {
 
 router.get("/vault", async (_req, res) => {
   await ensureSeedData();
-  const rows = await db.select().from(calls).where(eq(calls.status, "finished")).orderBy(desc(calls.workDate), desc(calls.id));
-  const profile = (await db.select().from(workerProfiles).orderBy(asc(workerProfiles.id)).limit(1))[0];
+  const rows = await db.select().from(calls).where(and(ownedCallsWhere(), eq(calls.status, "finished"))).orderBy(desc(calls.workDate), desc(calls.id));
+  const profile = (await db.select().from(workerProfiles).where(ownedProfileWhere()).orderBy(asc(workerProfiles.id)).limit(1))[0];
   const receipts = rows.map(callWithTotals);
   const documents = receipts
     .filter((call) => call.receiptAttachmentName)
@@ -689,8 +694,8 @@ router.get("/vault", async (_req, res) => {
 
 router.get("/passport", async (_req, res) => {
   await ensureSeedData();
-  const rows = await db.select().from(calls).where(eq(calls.status, "finished"));
-  const profile = (await db.select().from(workerProfiles).orderBy(asc(workerProfiles.id)).limit(1))[0];
+  const rows = await db.select().from(calls).where(and(ownedCallsWhere(), eq(calls.status, "finished")));
+  const profile = (await db.select().from(workerProfiles).where(ownedProfileWhere()).orderBy(asc(workerProfiles.id)).limit(1))[0];
   const grouped = new Map<string, { calls: number; hours: number }>();
   for (const call of rows) {
     const totals = callWithTotals(call);
