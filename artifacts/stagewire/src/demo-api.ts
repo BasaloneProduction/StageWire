@@ -223,6 +223,7 @@ export function installDemoApi() {
       return json({ call, checklist: { items: state.checklist[id] || [] }, notes: newestFirst(state.notes[id] || []), expenses: newestFirst(state.expenses[id] || []) });
     }
     if (tail === 'correct' && method === 'PATCH') {
+      if (call.status !== 'finished') return json({ error: 'Only a finished Call Receipt can be corrected here. Open the active call instead.' }, 409);
       const data = body(init);
       const changed = Object.keys(data).filter((key) => String(call[key] ?? '') !== String(data[key] ?? ''));
       Object.assign(call, data);
