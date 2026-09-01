@@ -23,6 +23,20 @@ test("auth router issues, checks, revokes, and clears only StageWire session coo
   assert.match(authRouter, /clearSessionCookieOptions\(process\.env\.NODE_ENV\)/);
 });
 
+test("account security controls require a valid StageWire session", () => {
+  assert.match(authRouter, /const requireSession = sessionWorkerMiddleware\(\)/);
+  assert.match(authRouter, /router\.get\("\/auth\/identities", requireSession/);
+  assert.match(authRouter, /router\.post\("\/auth\/identities\/link", requireSession/);
+  assert.match(authRouter, /router\.delete\("\/auth\/identities\/:identityId", requireSession/);
+  assert.match(authRouter, /router\.delete\("\/auth\/sessions", requireSession/);
+  assert.match(authRouter, /listCurrentWorkerIdentities\(\)/);
+  assert.match(authRouter, /linkVerifiedIdentityToCurrentWorker\(identity\.provider, identity\.subject\)/);
+  assert.match(authRouter, /unlinkCurrentWorkerIdentity\(identityId\)/);
+  assert.match(authRouter, /revokeAllCurrentWorkerSessions\(\)/);
+  assert.match(authRouter, /status\(409\).*another StageWire worker account/s, "identity conflicts must not merge workers");
+  assert.match(authRouter, /Keep at least one sign-in method linked/, "a worker must never unlink the final login method");
+});
+
 test("auth router stays unmounted until a real provider resolver exists", () => {
   assert.doesNotMatch(routeIndex, /worker-auth-router|createWorkerAuthRouter/, "preview routes must not expose the production auth router without a verified identity provider");
 });
