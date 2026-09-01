@@ -84,6 +84,9 @@ router.patch("/calls/:id/correct", async (req, res) => {
 
   const current = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
   if (!current) return res.status(404).json({ error: "Call not found." });
+  if (current.status !== "finished") {
+    return res.status(409).json({ error: "Only a finished Call Receipt can be corrected here. Open the active call instead." });
+  }
 
   try {
     const input = CorrectionBody.parse(req.body);
