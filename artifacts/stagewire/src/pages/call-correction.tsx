@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, CheckCircle2, LockKeyhole, Save, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, LockKeyhole, Save, ShieldCheck, Trash2, WalletCards } from 'lucide-react';
 import { Link, useLocation, useParams } from 'wouter';
 import {
   getGetCallQueryKey,
@@ -25,6 +25,10 @@ function optional(form: FormData, name: string) {
   return value || null;
 }
 
+function money(value: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+}
+
 export default function CallCorrectionPage() {
   const { id } = useParams<{ id: string }>();
   const callId = Number(id);
@@ -33,12 +37,27 @@ export default function CallCorrectionPage() {
   const [, setLocation] = useLocation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expenseSaving, setExpenseSaving] = useState<number | null>(null);
+  const [expenseError, setExpenseError] = useState<string | null>(null);
+  const [expenseMessage, setExpenseMessage] = useState<string | null>(null);
   const call = workday.data?.call;
+  const expenses = workday.data?.expenses ?? [];
 
   if (!Number.isFinite(callId) || callId <= 0) return <div className="page-wrap"><div className="error-box"><strong>Invalid call.</strong></div></div>;
   if (workday.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Opening correction…</h2></div></div>;
   if (workday.isError || !call) return <div className="page-wrap"><div className="error-box"><strong>This call could not be opened for correction.</strong><button className="btn btn-quiet" onClick={() => workday.refetch()}>Try again</button></div></div>;
   if (call.status !== 'finished') return <div className="page-wrap"><div className="error-box"><AlertCircle size={20}/><div><strong>This call is not finished yet.</strong><p>Corrections are for locked Call Receipts. Use the active call while the job is still open.</p><Link href={`/workday/${callId}`} className="btn btn-primary" style={{ marginTop: 14 }}>Open active call</Link></div></div></div>;
+
+  const refreshRecords = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: getGetCallQueryKey(callId) }),
+      client.invalidateQueries({ queryKey: getGetCallWorkdayQueryKey(callId) }),
+      client.invalidateQueries({ queryKey: getListCallsQueryKey() }),
+      client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+      client.invalidateQueries({ queryKey: getGetVaultQueryKey() }),
+      client.invalidateQueries({ queryKey: getGetPassportQueryKey() }),
+    ]);
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -116,14 +135,7 @@ export default function CallCorrectionPage() {
         setError('Nothing changed. The locked Call Receipt was left exactly as it was.');
         return;
       }
-      await Promise.all([
-        client.invalidateQueries({ queryKey: getGetCallQueryKey(callId) }),
-        client.invalidateQueries({ queryKey: getGetCallWorkdayQueryKey(callId) }),
-        client.invalidateQueries({ queryKey: getListCallsQueryKey() }),
-        client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
-        client.invalidateQueries({ queryKey: getGetVaultQueryKey() }),
-        client.invalidateQueries({ queryKey: getGetPassportQueryKey() }),
-      ]);
+      await refreshRecords();
       setLocation(`/receipt/${callId}?corrected=1`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'This correction could not be saved.');
@@ -131,6 +143,70 @@ export default function CallCorrectionPage() {
       setSaving(false);
     }
   };
+
+  const correctExpense = async (event: FormEvent<HTMLFormElement>, expenseId: number) => {
+    event.preventDefault();
+    setExpenseError(null);
+    setExpenseMessage(null);
+    const form = new FormData(event.currentTarget);
+    const amount = Number(form.get('amount') || 0);
+    const category = String(form.get('category') || '').trim();
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setExpenseError('Expense amount must be greater than zero.');
+      return;
+    }
+    if (!category) {
+      setExpenseError('Expense category cannot be blank.');
+      return;
+    }
+
+    try {
+      setExpenseSaving(expenseId);
+      const response = await fetch(`/api/calls/${callId}/expenses/${expenseId}/correct`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          category,
+          description: optional(form, 'description'),
+          receiptAttachmentName: optional(form, 'receiptAttachmentName'),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'That expense correction could not be saved.');
+      if (!result.corrected) {
+        setExpenseError('Nothing changed on that expense.');
+        return;
+      }
+      await refreshRecords();
+      setExpenseMessage(`Expense #${expenseId} corrected. Money and the Call Receipt were refreshed.`);
+    } catch (caught) {
+      setExpenseError(caught instanceof Error ? caught.message : 'That expense correction could not be saved.');
+    } finally {
+      setExpenseSaving(null);
+    }
+  };
+
+  const removeExpense = async (expenseId: number) => {
+    setExpenseError(null);
+    setExpenseMessage(null);
+    if (!window.confirm('Remove this mistaken expense from the Call Receipt? StageWire will add a private correction note.')) return;
+    try {
+      setExpenseSaving(expenseId);
+      const response = await fetch(`/api/calls/${callId}/expenses/${expenseId}/correct`, { method: 'DELETE' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'That expense could not be removed.');
+      await refreshRecords();
+      setExpenseMessage(`Expense #${expenseId} removed. Money and the Call Receipt were refreshed.`);
+    } catch (caught) {
+      setExpenseError(caught instanceof Error ? caught.message : 'That expense could not be removed.');
+    } finally {
+      setExpenseSaving(null);
+    }
+  };
+
+  const itemizedTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const unitemizedAmount = Math.max(0, (call.expenseAmount || 0) - itemizedTotal);
 
   return <div className="page-wrap"><div className="page-heading"><div><Link href={`/receipt/${callId}`} className="link-text"><ArrowLeft size={17}/> Back to receipt</Link><div className="eyebrow" style={{ marginTop: 22 }}>Worker-controlled correction / #{callId}</div><h1 style={{ marginTop: 10 }}>Correct the record.</h1><p className="subtitle">Fix the work record without hiding that a correction happened.</p></div><span className="badge badge-finished"><LockKeyhole size={15}/> Private</span></div>
 
@@ -168,15 +244,25 @@ export default function CallCorrectionPage() {
       <TextAreaField label="Final closeout note" name="note" defaultValue={call.note || ''} />
     </div>
 
-    <div className="warning-box" role="status" style={{ marginTop: 20 }}><AlertCircle size={20}/><div><strong>Expense corrections are not handled on this screen yet.</strong><p>Recorded expense rows and the locked expense total are left untouched so StageWire does not create a money mismatch.</p></div></div>
     {error && <div className="error-box" role="alert" style={{ marginTop: 18 }}><AlertCircle size={20}/> {error}</div>}
-    <div className="form-actions" style={{ marginTop: 22 }}><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving correction…' : <><Save size={19}/> Save correction</>}</button><Link href={`/receipt/${callId}`} className="btn btn-quiet">Cancel</Link></div>
+    <div className="form-actions" style={{ marginTop: 22 }}><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving correction…' : <><Save size={19}/> Save receipt facts</>}</button><Link href={`/receipt/${callId}`} className="btn btn-quiet">Cancel</Link></div>
     <div className="privacy-rule"><CheckCircle2 size={18}/> A saved correction refreshes the connected worker records before returning you to the updated Call Receipt.</div>
-  </form></div>;
+  </form>
+
+  <section className="card card-pad" style={{ marginTop: 22 }}>
+    <div className="eyebrow">Money corrections</div>
+    <h2 style={{ marginTop: 7 }}><WalletCards size={21}/> Itemized expenses</h2>
+    <p className="subtitle">Fix a typo or remove a mistaken expense. Every change adds a private correction note and updates the locked expense totals by the exact difference.</p>
+    {expenseMessage && <div className="success-box" style={{ marginTop: 16 }}><CheckCircle2 size={20}/>{expenseMessage}</div>}
+    {expenseError && <div className="error-box" role="alert" style={{ marginTop: 16 }}><AlertCircle size={20}/>{expenseError}</div>}
+    {expenses.length === 0 ? <div className="card empty" style={{ marginTop: 18 }}><WalletCards size={24}/><h3>No itemized expenses on this receipt.</h3><p>There is nothing to correct here.</p></div> : <div className="vault-items" style={{ marginTop: 18 }}>{expenses.map((expense) => <form className="card card-pad" key={expense.id} onSubmit={(event) => correctExpense(event, expense.id)}><div className="finish-context"><div><div className="eyebrow">Expense #{expense.id}</div><h3 style={{ marginTop: 6 }}>{expense.category} · {money(expense.amount)}</h3></div><span className="badge badge-finished">itemized</span></div><div className="form-grid" style={{ marginTop: 14 }}><Field label="Amount" name="amount" type="number" min="0.01" step="0.01" defaultValue={String(expense.amount)} /><Field label="Category" name="category" defaultValue={expense.category} /><Field label="Description" name="description" defaultValue={expense.description || ''} /><Field label="Receipt filename" name="receiptAttachmentName" defaultValue={expense.receiptAttachmentName || ''} /></div><div className="form-actions" style={{ marginTop: 14 }}><button className="btn btn-secondary" type="submit" disabled={expenseSaving === expense.id}><Save size={17}/>{expenseSaving === expense.id ? 'Saving…' : 'Save expense'}</button><button className="btn btn-quiet" type="button" disabled={expenseSaving === expense.id} onClick={() => removeExpense(expense.id)}><Trash2 size={17}/> Remove mistaken expense</button></div></form>)}</div>}
+    {unitemizedAmount > 0 && <div className="warning-box" role="status" style={{ marginTop: 18 }}><AlertCircle size={20}/><div><strong>{money(unitemizedAmount)} is not itemized.</strong><p>This older or imported locked amount is preserved and cannot be safely assigned to a specific expense row here.</p></div></div>}
+  </section>
+  </div>;
 }
 
 function Field({ label, name, defaultValue, type = 'text', required = false, min, step }: { label: string; name: string; defaultValue: string; type?: string; required?: boolean; min?: string; step?: string }) {
-  return <div className="field"><label htmlFor={name}>{label}{required && ' *'}</label><input id={name} name={name} type={type} defaultValue={defaultValue} required={required} min={min} step={step}/></div>;
+  return <div className="field"><label htmlFor={`${name}-${defaultValue}`}>{label}{required && ' *'}</label><input id={`${name}-${defaultValue}`} name={name} type={type} defaultValue={defaultValue} required={required} min={min} step={step}/></div>;
 }
 
 function TextAreaField({ label, name, defaultValue }: { label: string; name: string; defaultValue: string }) {
