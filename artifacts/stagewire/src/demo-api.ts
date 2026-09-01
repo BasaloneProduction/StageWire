@@ -126,6 +126,10 @@ const roleChecklistSuggestions: Record<string, string[]> = {
   'Truck / Logistics': ['Driver documents', 'Load plan reviewed'],
 };
 
+const correctionLabels: Record<string,string> = {
+  showName:'show or event',venue:'venue',venueAddress:'venue address',workDate:'work date',scheduledStart:'scheduled start',estimatedEnd:'estimated end',role:'role',department:'department',employer:'employer / labor provider',crewContactName:'crew contact',crewContactPhone:'crew contact phone',parkingInstructions:'parking instructions',crewEntrance:'crew entrance',loadingDockInfo:'dock / load-in info',dressRequirements:'dress requirements',ppeRequirements:'PPE requirements',toolRequirements:'tool requirements',generalNotes:'dispatch notes',payType:'pay type',minimumHours:'minimum hours',hourlyRate:'rate / flat amount',arrivalAt:'arrival',actualStart:'paid start',actualEnd:'actual end',breakMinutes:'break minutes',mileage:'mileage',note:'final closeout note'
+};
+
 function defaultChecklist(callId: number, role: string, state: DemoState) {
   const labels = [...defaultChecklistItems, ...(roleChecklistSuggestions[role] || [])];
   return labels.map((label, index) => ({
@@ -217,6 +221,30 @@ export function installDemoApi() {
     if (tail === 'workday' && method === 'GET') {
       const newestFirst = (items: any[]) => [...items].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       return json({ call, checklist: { items: state.checklist[id] || [] }, notes: newestFirst(state.notes[id] || []), expenses: newestFirst(state.expenses[id] || []) });
+    }
+    if (tail === 'correct' && method === 'PATCH') {
+      const data = body(init);
+      const changed = Object.keys(data).filter((key) => String(call[key] ?? '') !== String(data[key] ?? ''));
+      Object.assign(call, data);
+      if (changed.length > 0) {
+        (state.notes[id] ||= []).push({
+          id: state.nextNoteId++, callId: id,
+          text: `Worker corrected: ${changed.map((key) => correctionLabels[key] || key).join(', ')}.`,
+          category: 'correction',
+          createdAt: new Date().toISOString(),
+        });
+      }
+      if (call.actualStart && call.actualEnd) {
+        const start = new Date(call.actualStart).getTime();
+        const end = new Date(call.actualEnd).getTime();
+        const workedHours = Math.max(0, (end - start) / 3600000 - Number(call.breakMinutes || 0) / 60);
+        const payableHours = Math.max(workedHours, Number(call.minimumHours || 0));
+        const rate = Number(call.hourlyRate || 0);
+        call.hours = Number(workedHours.toFixed(2));
+        call.gross = Number((call.payType === 'hourly' ? payableHours * rate : rate).toFixed(2));
+      }
+      save(state);
+      return json({ id, corrected: changed.length > 0, changed: changed.map((key) => correctionLabels[key] || key) });
     }
     if (tail === 'arrive' && method === 'POST') { Object.assign(call, body(init), { status: 'arrived' }); save(state); return json(call); }
     if (tail === 'start' && method === 'POST') { Object.assign(call, body(init), { status: 'active' }); save(state); return json(call); }
