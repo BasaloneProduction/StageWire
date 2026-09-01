@@ -1,0 +1,18 @@
+{
+  "name": "StageWire",
+  "short_name": "StageWire",
+  "description": "Worker-first call tracking for stagehands, riggers, and live-production professionals.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
