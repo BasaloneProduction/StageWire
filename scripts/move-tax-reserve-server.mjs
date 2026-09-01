@@ -13,7 +13,7 @@ function patchFile(path, edits) {
 
 patchFile('lib/db/src/schema/stagewire.ts', [[
 `  shareSkills: boolean("share_skills").notNull().default(true),\n  shareCertifications: boolean("share_certifications").notNull().default(true),\n}, (table) => [\n  uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),\n]);\n`,
-`  shareSkills: boolean("share_skills").notNull().default(true),\n  shareCertifications: boolean("share_certifications").notNull().default(true),\n  taxReservePercent: integer("tax_reserve_percent").notNull().default(25),\n}, (table) => [\n  uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),\n  check("worker_profiles_tax_reserve_percent_check", sql\`${table.taxReservePercent} between 0 and 100\`),\n]);\n`,
+`  shareSkills: boolean("share_skills").notNull().default(true),\n  shareCertifications: boolean("share_certifications").notNull().default(true),\n  taxReservePercent: integer("tax_reserve_percent").notNull().default(25),\n}, (table) => [\n  uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),\n  check("worker_profiles_tax_reserve_percent_check", sql\`\${table.taxReservePercent} between 0 and 100\`),\n]);\n`,
 'worker tax reserve schema',
 ]]);
 
