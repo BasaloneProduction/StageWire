@@ -29,4 +29,9 @@ export interface WorkerProfile {
   shareHomeBase: boolean;
   shareSkills: boolean;
   shareCertifications: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent: number;
 }

@@ -89,6 +89,11 @@ export interface WorkerProfile {
   shareHomeBase: boolean;
   shareSkills: boolean;
   shareCertifications: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent: number;
 }
 
 export interface ProfileInput {
@@ -112,6 +117,11 @@ export interface ProfileInput {
   shareHomeBase?: boolean;
   shareSkills?: boolean;
   shareCertifications?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent?: number;
 }
 
 export type CallPayType = typeof CallPayType[keyof typeof CallPayType];

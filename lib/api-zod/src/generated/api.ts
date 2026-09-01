@@ -169,6 +169,9 @@ export const GetDashboardResponse = zod.object({
  */
 export const getProfileResponseYearsExperienceMin = 0;
 
+export const getProfileResponseTaxReservePercentMin = 0;
+export const getProfileResponseTaxReservePercentMax = 100;
+
 
 
 export const GetProfileResponse = zod.object({
@@ -189,7 +192,8 @@ export const GetProfileResponse = zod.object({
   "sharePhoto": zod.boolean(),
   "shareHomeBase": zod.boolean(),
   "shareSkills": zod.boolean(),
-  "shareCertifications": zod.boolean()
+  "shareCertifications": zod.boolean(),
+  "taxReservePercent": zod.int().min(getProfileResponseTaxReservePercentMin).max(getProfileResponseTaxReservePercentMax)
 })
 
 
@@ -197,6 +201,9 @@ export const GetProfileResponse = zod.object({
  * @summary Save the private worker profile
  */
 export const updateProfileBodyYearsExperienceMin = 0;
+
+export const updateProfileBodyTaxReservePercentMin = 0;
+export const updateProfileBodyTaxReservePercentMax = 100;
 
 
 
@@ -216,10 +223,14 @@ export const UpdateProfileBody = zod.object({
   "sharePhoto": zod.boolean().optional(),
   "shareHomeBase": zod.boolean().optional(),
   "shareSkills": zod.boolean().optional(),
-  "shareCertifications": zod.boolean().optional()
+  "shareCertifications": zod.boolean().optional(),
+  "taxReservePercent": zod.int().min(updateProfileBodyTaxReservePercentMin).max(updateProfileBodyTaxReservePercentMax).optional()
 })
 
 export const updateProfileResponseYearsExperienceMin = 0;
+
+export const updateProfileResponseTaxReservePercentMin = 0;
+export const updateProfileResponseTaxReservePercentMax = 100;
 
 
 
@@ -241,7 +252,8 @@ export const UpdateProfileResponse = zod.object({
   "sharePhoto": zod.boolean(),
   "shareHomeBase": zod.boolean(),
   "shareSkills": zod.boolean(),
-  "shareCertifications": zod.boolean()
+  "shareCertifications": zod.boolean(),
+  "taxReservePercent": zod.int().min(updateProfileResponseTaxReservePercentMin).max(updateProfileResponseTaxReservePercentMax)
 })
 
 

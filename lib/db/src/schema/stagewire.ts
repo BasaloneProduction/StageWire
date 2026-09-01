@@ -33,8 +33,10 @@ export const workerProfiles = pgTable("worker_profiles", {
   shareHomeBase: boolean("share_home_base").notNull().default(false),
   shareSkills: boolean("share_skills").notNull().default(true),
   shareCertifications: boolean("share_certifications").notNull().default(true),
+  taxReservePercent: integer("tax_reserve_percent").notNull().default(25),
 }, (table) => [
   uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),
+  check("worker_profiles_tax_reserve_percent_check", sql`${table.taxReservePercent} between 0 and 100`),
 ]);
 
 export const workerIdentities = pgTable("worker_identities", {

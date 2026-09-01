@@ -1,21 +1,28 @@
 import { Archive, Calculator, CalendarDays, Download, LockKeyhole, ReceiptText, ShieldCheck, WalletCards } from 'lucide-react';
 import { Link } from 'wouter';
-import { useGetVault } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { getGetProfileQueryKey, useGetProfile, useGetVault, useUpdateProfile } from '@workspace/api-client-react';
 import { useState } from 'react';
 
 function money(value:number){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value||0)}
-const RESERVE_KEY='stagewire-tax-reserve-percent-v14';
+const LEGACY_RESERVE_KEY='stagewire-tax-reserve-percent-v14';
+function legacyReservePercent(){const saved=Number(localStorage.getItem(LEGACY_RESERVE_KEY));return saved>=0&&saved<=100?saved:null}
 function monthKey(value:string){const date=new Date(`${value}T12:00:00`);if(Number.isNaN(date.getTime()))return'';return`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`}
 function monthLabel(key:string){const [year,month]=key.split('-').map(Number);if(!year||!month)return key;return new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(new Date(year,month-1,1))}
 function csvCell(value:unknown){const text=String(value??'');return /[",\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text}
 
 export default function MoneyCenterPage(){
   const vault=useGetVault();
+  const profile=useGetProfile();
+  const updateProfile=useUpdateProfile();
+  const client=useQueryClient();
   const data=vault.data;
-  const[reservePercent,setReservePercent]=useState(()=>{const saved=Number(localStorage.getItem(RESERVE_KEY));return saved>=0&&saved<=100?saved:25});
+  const worker=profile.data;
+  const[reserveDraft,setReserveDraft]=useState<number|null>(legacyReservePercent);
   const[currentMonth,setCurrentMonth]=useState(()=>{const now=new Date();return`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`});
-  if(vault.isLoading)return <div className="page-wrap"><div className="card card-pad"><h2>Opening Money…</h2></div></div>;
-  if(vault.isError||!data)return <div className="page-wrap"><div className="error-box"><strong>Money could not be opened.</strong><button className="btn btn-quiet" onClick={()=>vault.refetch()}>Try again</button></div></div>;
+  if(vault.isLoading||profile.isLoading)return <div className="page-wrap"><div className="card card-pad"><h2>Opening Money…</h2></div></div>;
+  if(vault.isError||profile.isError||!data||!worker)return <div className="page-wrap"><div className="error-box"><strong>Money could not be opened.</strong><button className="btn btn-quiet" onClick={()=>{vault.refetch();profile.refetch()}}>Try again</button></div></div>;
+  const reservePercent=reserveDraft??worker.taxReservePercent;
 
   const monthOptions=Array.from(new Set(data.calls.map(call=>monthKey(call.workDate)).filter(Boolean))).sort().reverse();
   const monthCalls=data.calls.filter(call=>monthKey(call.workDate)===currentMonth);
@@ -35,7 +42,8 @@ export default function MoneyCenterPage(){
   const monthAfterExpenses=Math.max(0,monthGross-monthExpenses);
   const monthReserve=monthAfterExpenses*(reservePercent/100);
   const monthAfterReserve=Math.max(0,monthAfterExpenses-monthReserve);
-  const changeReserve=(value:number)=>{const next=Math.min(100,Math.max(0,value||0));setReservePercent(next);localStorage.setItem(RESERVE_KEY,String(next))};
+  const changeReserve=(value:number)=>{const next=Math.min(100,Math.max(0,value||0));setReserveDraft(next)};
+  const saveReserve=()=>updateProfile.mutate({data:{displayName:worker.displayName,primaryRole:worker.primaryRole,taxReservePercent:reservePercent}},{onSuccess:(result)=>{client.setQueryData(getGetProfileQueryKey(),result);client.invalidateQueries({queryKey:getGetProfileQueryKey()});try{localStorage.removeItem(LEGACY_RESERVE_KEY)}catch{}setReserveDraft(null)}});
   const downloadMonthCsv=()=>{if(monthCalls.length===0)return;const header=['Work date','Show / event','Venue','Role','Hours','Gross','Recorded expenses','Mileage','Parking','Tolls'];const rows=monthCalls.map(call=>[call.workDate,call.showName,call.venue,call.role,call.hours.toFixed(2),call.gross.toFixed(2),(call.expenseAmount||0).toFixed(2),(call.mileage||0).toFixed(1),(call.parkingExpense||0).toFixed(2),(call.tollExpense||0).toFixed(2)]);const csv=[header,...rows].map(row=>row.map(csvCell).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`stagewire-money-${currentMonth}.csv`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url)};
 
   return <div className="page-wrap">
@@ -45,7 +53,7 @@ export default function MoneyCenterPage(){
 
     <div className="stats-grid" style={{marginTop:22}}><div className="card stat-card"><span className="stat-label">All finished calls</span><strong className="stat-value">{data.calls.length}</strong></div><div className="card stat-card"><span className="stat-label">All recorded hours</span><strong className="stat-value">{hours.toFixed(1)}h</strong></div><div className="card stat-card"><span className="stat-label">All recorded gross</span><strong className="stat-value">{money(gross)}</strong></div><div className="card stat-card"><span className="stat-label">All recorded expenses</span><strong className="stat-value">{money(expenses)}</strong></div><div className="card stat-card"><span className="stat-label">All-time reserve plan</span><strong className="stat-value">{money(reserve)}</strong></div></div>
 
-    <section className="card card-pad" style={{marginTop:22}}><div className="eyebrow">Tax planning</div><h2 style={{marginTop:7}}><Calculator size={22}/> Your reserve setting</h2><p className="subtitle">Pick a percentage you want StageWire to set aside in the planning view. This does not move money, calculate your tax bill, or file anything.</p><div className="field" style={{maxWidth:260,marginTop:16}}><label htmlFor="reserve-percent">Reserve percentage</label><div style={{display:'flex',alignItems:'center',gap:10}}><input id="reserve-percent" type="number" min="0" max="100" step="1" value={reservePercent} onChange={event=>changeReserve(Number(event.target.value))}/><strong>%</strong></div></div><div className="receipt-grid" style={{marginTop:18}}><div><div className="receipt-label">Recorded gross</div><div className="receipt-value">{money(gross)}</div></div><div><div className="receipt-label">All recorded expenses</div><div className="receipt-value">{money(expenses)}</div></div><div><div className="receipt-label">After recorded expenses</div><div className="receipt-value">{money(afterExpenses)}</div></div><div><div className="receipt-label">{reservePercent}% reserve plan</div><div className="receipt-value">{money(reserve)}</div></div><div><div className="receipt-label">After reserve plan</div><div className="receipt-value">{money(afterReserve)}</div></div></div></section>
+    <section className="card card-pad" style={{marginTop:22}}><div className="eyebrow">Tax planning</div><h2 style={{marginTop:7}}><Calculator size={22}/> Your reserve setting</h2><p className="subtitle">Pick a percentage you want StageWire to set aside in the planning view. This does not move money, calculate your tax bill, or file anything.</p><div className="field" style={{maxWidth:260,marginTop:16}}><label htmlFor="reserve-percent">Reserve percentage</label><div style={{display:'flex',alignItems:'center',gap:10}}><input id="reserve-percent" type="number" min="0" max="100" step="1" value={reservePercent} onChange={event=>changeReserve(Number(event.target.value))}/><strong>%</strong></div></div><div className="form-actions" style={{marginTop:12}}><button className="btn btn-secondary" type="button" onClick={saveReserve} disabled={reserveDraft===null||updateProfile.isPending}>{updateProfile.isPending?'Saving…':'Save reserve setting'}</button></div>{updateProfile.error&&<div className="error-box" role="alert" style={{marginTop:12}}><strong>{(updateProfile.error as Error).message||'Reserve setting could not be saved.'}</strong></div>}<div className="receipt-grid" style={{marginTop:18}}><div><div className="receipt-label">Recorded gross</div><div className="receipt-value">{money(gross)}</div></div><div><div className="receipt-label">All recorded expenses</div><div className="receipt-value">{money(expenses)}</div></div><div><div className="receipt-label">After recorded expenses</div><div className="receipt-value">{money(afterExpenses)}</div></div><div><div className="receipt-label">{reservePercent}% reserve plan</div><div className="receipt-value">{money(reserve)}</div></div><div><div className="receipt-label">After reserve plan</div><div className="receipt-value">{money(afterReserve)}</div></div></div></section>
 
     <section className="card card-pad" style={{marginTop:22}}><div className="eyebrow">Work costs captured automatically</div><h2 style={{marginTop:7}}>What the finished calls already know</h2><div className="stats-grid" style={{marginTop:16}}><div className="card stat-card"><span className="stat-label">Mileage logged</span><strong className="stat-value">{mileage.toFixed(1)} mi</strong></div><div className="card stat-card"><span className="stat-label">Parking</span><strong className="stat-value">{money(parking)}</strong></div><div className="card stat-card"><span className="stat-label">Tolls</span><strong className="stat-value">{money(tolls)}</strong></div><div className="card stat-card"><span className="stat-label">Other recorded expenses</span><strong className="stat-value">{money(otherExpenses)}</strong></div></div><p className="help-text" style={{marginTop:14}}>Recorded expenses include the costs saved during the call and at closeout. Mileage is shown as a work record only; StageWire does not automatically turn it into a tax deduction.</p></section>
 

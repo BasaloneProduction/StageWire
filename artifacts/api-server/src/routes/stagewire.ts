@@ -358,6 +358,7 @@ router.put("/profile", async (req, res) => {
           shareHomeBase: input.shareHomeBase ?? current.shareHomeBase,
           shareSkills: input.shareSkills ?? current.shareSkills,
           shareCertifications: input.shareCertifications ?? current.shareCertifications,
+          taxReservePercent: input.taxReservePercent ?? current.taxReservePercent,
         })
         .where(and(eq(workerProfiles.id, current.id), ownedProfileWhere()))
         .returning()

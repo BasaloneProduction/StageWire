@@ -625,6 +625,10 @@ components:
           type: boolean
         shareCertifications:
           type: boolean
+        taxReservePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
       required:
         - id
         - displayName
@@ -644,6 +648,7 @@ components:
         - shareHomeBase
         - shareSkills
         - shareCertifications
+        - taxReservePercent
     ProfileInput:
       type: object
       properties:
@@ -686,6 +691,10 @@ components:
           type: boolean
         shareCertifications:
           type: boolean
+        taxReservePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
       required:
         - displayName
         - primaryRole

@@ -35,6 +35,7 @@ function seed(): DemoState {
       shareHomeBase: false,
       shareSkills: true,
       shareCertifications: true,
+      taxReservePercent: 25,
     },
     checklist: {},
     notes: {},

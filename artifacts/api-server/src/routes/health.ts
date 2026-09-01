@@ -14,6 +14,7 @@ router.get("/healthz", async (_req, res) => {
         shareHomeBase: workerProfiles.shareHomeBase,
         shareSkills: workerProfiles.shareSkills,
         shareCertifications: workerProfiles.shareCertifications,
+        taxReservePercent: workerProfiles.taxReservePercent,
       }).from(workerProfiles).limit(1),
       db.select({ id: workerCredentials.id, ownerKey: workerCredentials.ownerKey }).from(workerCredentials).limit(1),
     ]);

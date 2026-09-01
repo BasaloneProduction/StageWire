@@ -1,14 +1,14 @@
 import { Archive, BadgeCheck, Camera, CheckCircle2, FilePenLine, FileText, HeartHandshake, LockKeyhole, MapPin, Printer, ReceiptText, ShieldCheck, WalletCards } from 'lucide-react';
 import { Link, useParams } from 'wouter';
-import { useGetCallWorkday } from '@workspace/api-client-react';
+import { useGetCallWorkday, useGetProfile } from '@workspace/api-client-react';
 function money(value: number) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0); }
 function when(value?: string | null) { if (!value) return 'Not recorded'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date); }
 function workDate(value: string) { const date = new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }).format(date); }
 function Datum({ label, value }: { label: string; value: string }) { return <div><div className="receipt-label">{label}</div><div className="receipt-value">{value}</div></div>; }
-const RESERVE_KEY = 'stagewire-tax-reserve-percent-v14';
-function reservePercent() { const saved = Number(localStorage.getItem(RESERVE_KEY)); return saved >= 0 && saved <= 100 ? saved : 25; }
+const LEGACY_RESERVE_KEY = 'stagewire-tax-reserve-percent-v14';
+function legacyReservePercent() { const saved = Number(localStorage.getItem(LEGACY_RESERVE_KEY)); return saved >= 0 && saved <= 100 ? saved : null; }
 export default function WorkReceiptPage() {
-  const { id } = useParams<{ id: string }>(); const callId = Number(id); const workday = useGetCallWorkday(callId); const data = workday.data; const call = data?.call; const corrected = new URLSearchParams(window.location.search).get('corrected') === '1';
+  const { id } = useParams<{ id: string }>(); const callId = Number(id); const workday = useGetCallWorkday(callId); const profile = useGetProfile(); const data = workday.data; const call = data?.call; const corrected = new URLSearchParams(window.location.search).get('corrected') === '1';
   if (!Number.isFinite(callId) || callId <= 0) return <div className="page-wrap"><div className="error-box"><strong>Invalid receipt.</strong></div></div>;
   if (workday.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Opening work receipt…</h2></div></div>;
   if (workday.isError || !data || !call) return <div className="page-wrap"><div className="error-box"><strong>This receipt could not be loaded.</strong><button className="btn btn-quiet" onClick={() => workday.refetch()}>Try again</button></div></div>;
@@ -17,7 +17,7 @@ export default function WorkReceiptPage() {
   const expenseTotal = Math.max(call.expenseAmount || 0, itemizedExpenseTotal);
   const unitemizedDifference = Math.max(0, expenseTotal - itemizedExpenseTotal);
   const netBeforeTax = Math.max(0, (call.gross || 0) - expenseTotal);
-  const reserve = reservePercent();
+  const reserve = legacyReservePercent() ?? profile.data?.taxReservePercent ?? 25;
   const taxReserve = Math.max(0, netBeforeTax * (reserve / 100));
   const afterReserve = Math.max(0, netBeforeTax - taxReserve);
   const closeoutNote = call.note?.trim() || '';
