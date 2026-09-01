@@ -4,23 +4,35 @@ import test from "node:test";
 
 const schema = fs.readFileSync(new URL("../../../../lib/db/src/schema/stagewire.ts", import.meta.url), "utf8");
 const ownerHelpers = fs.readFileSync(new URL("./worker-owner.ts", import.meta.url), "utf8");
+const identityMap = fs.readFileSync(new URL("./worker-identity-map.ts", import.meta.url), "utf8");
 const workerIdentity = fs.readFileSync(new URL("../routes/worker-identity.ts", import.meta.url), "utf8");
 const routeIndex = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
 const stagewireRoutes = fs.readFileSync(new URL("../routes/stagewire.ts", import.meta.url), "utf8");
 const correctionRoutes = fs.readFileSync(new URL("../routes/corrections.ts", import.meta.url), "utf8");
 const openCallRoutes = fs.readFileSync(new URL("../routes/open-call-edits.ts", import.meta.url), "utf8");
 
-test("worker-backed tables keep an explicit owner key", () => {
+test("worker-backed tables keep explicit owner boundaries", () => {
   const ownerColumns = schema.match(/ownerKey:\s*text\("owner_key"\)/g) ?? [];
-  assert.equal(ownerColumns.length, 2, "workerProfiles and calls must both keep an owner key");
+  assert.equal(ownerColumns.length, 3, "workerProfiles, workerIdentities, and calls must keep owner keys");
   assert.match(schema, /worker_profiles_owner_key_unique/, "each owner must have one worker profile");
+  assert.match(schema, /worker_identities_provider_subject_unique/, "one external identity must map to only one StageWire owner");
+  assert.match(schema, /references\(\(\) => workerProfiles\.ownerKey/, "identity mappings must point to a real StageWire worker profile");
   assert.match(schema, /calls_owner_key_idx/, "owner-scoped call lookup must stay indexed");
+});
+
+test("authenticated identities resolve through the private StageWire owner map", () => {
+  assert.match(identityMap, /workerIdentities\.provider/);
+  assert.match(identityMap, /workerIdentities\.subject/);
+  assert.match(identityMap, /workerIdentities\.ownerKey/);
+  assert.match(identityMap, /kind:\s*"authenticated"/);
+  assert.doesNotMatch(identityMap, /ownerKey:\s*cleanSubject/, "provider subjects must never become database owner keys directly");
 });
 
 test("owner predicates resolve identity from request context", () => {
   assert.match(ownerHelpers, /currentWorkerOwnerKey\(\)/);
   assert.doesNotMatch(ownerHelpers, /eq\(calls\.ownerKey, PREVIEW_OWNER_KEY\)/, "database predicates must not be permanently hard-coded to the preview worker");
-  assert.match(workerIdentity, /runWithWorkerOwner\(PREVIEW_OWNER_KEY, next\)/, "preview middleware is the one temporary identity source until auth replaces it");
+  assert.match(workerIdentity, /runWithWorkerPrincipal/);
+  assert.match(workerIdentity, /kind:\s*"preview"/, "preview middleware must be explicitly non-authenticated until auth replaces it");
 });
 
 test("worker identity and ownership gates run before every worker route", () => {
