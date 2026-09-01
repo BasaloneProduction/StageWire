@@ -18,7 +18,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin || url.pathname.includes('/api/')) return;
+  const isApiRequest = url.pathname === '/api' || url.pathname.startsWith('/api/') || url.pathname.includes('/api/');
+  if (url.origin !== self.location.origin || isApiRequest) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
