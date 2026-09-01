@@ -2,6 +2,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { stripPrivateResponseFields } from "./domain/private-response";
 
 const app: Express = express();
 
@@ -37,6 +38,8 @@ app.use(express.urlencoded({ extended: true, limit: "256kb" }));
 app.use("/api", (_req, res, next) => {
   res.setHeader("Cache-Control", "private, no-store, max-age=0");
   res.setHeader("Pragma", "no-cache");
+  const originalJson = res.json.bind(res);
+  res.json = ((body: unknown) => originalJson(stripPrivateResponseFields(body))) as Response["json"];
   next();
 });
 app.use("/api", router);
