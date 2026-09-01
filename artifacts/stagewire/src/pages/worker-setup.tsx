@@ -9,6 +9,7 @@ import {
   useUpdateProfile,
   type ProfileInput,
 } from '@workspace/api-client-react';
+import { AccountSecurityPanel } from '@/pages/account-security';
 
 type ShareSettings = {
   sharePhoto: boolean;
@@ -221,6 +222,8 @@ export default function WorkerSetupPage() {
           <Link href="/passport" className="btn btn-quiet">Career Passport</Link>
         </div>
       </form>
+
+      <AccountSecurityPanel />
     </div>
   );
 }
