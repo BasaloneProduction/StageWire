@@ -24,8 +24,8 @@ echo "Starting StageWire API on :${API_PORT}"
 PORT="${API_PORT}" pnpm --dir artifacts/api-server dev &
 API_PID=$!
 
-# Give the API build/start a moment before Vite begins proxying requests.
-sleep 2
+echo "Checking StageWire API and database ownership schema..."
+API_PORT="${API_PORT}" node scripts/check-stagewire-api.mjs
 
 echo "Starting StageWire web app on :${WEB_PORT}"
 PORT="${WEB_PORT}" API_PORT="${API_PORT}" BASE_PATH="${BASE_PATH}" VITE_REAL_API=true pnpm --dir artifacts/stagewire dev &
