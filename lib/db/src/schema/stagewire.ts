@@ -85,6 +85,25 @@ export const workerCrewKitState = pgTable("worker_crew_kit_state", {
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 });
 
+export const workerFileMetadata = pgTable("worker_file_metadata", {
+  id: serial("id").primaryKey(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  sizeBytes: integer("size_bytes").notNull().default(0),
+  mimeType: text("mime_type").notNull().default(""),
+  storageKey: text("storage_key"),
+  storageStatus: text("storage_status").notNull().default("metadata"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => [
+  index("worker_file_metadata_owner_key_idx").on(table.ownerKey),
+  index("worker_file_metadata_owner_kind_idx").on(table.ownerKey, table.kind),
+  check("worker_file_metadata_kind_check", sql`${table.kind} in ('certification', 'document', 'profile-photo')`),
+  check("worker_file_metadata_storage_status_check", sql`${table.storageStatus} in ('metadata', 'stored')`),
+  check("worker_file_metadata_size_check", sql`${table.sizeBytes} >= 0`),
+]);
+
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
   ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "restrict" }),
