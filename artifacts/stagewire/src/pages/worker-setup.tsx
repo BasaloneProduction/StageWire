@@ -1,6 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BadgeCheck, Camera, CheckCircle2, FileText, LockKeyhole, Save, ShieldCheck, Upload, UserRound } from 'lucide-react';
+import { BadgeCheck, BookOpenCheck, Camera, CheckCircle2, FileText, LockKeyhole, Save, ShieldCheck, Upload, UserRound } from 'lucide-react';
 import { Link } from 'wouter';
 import {
   getGetPassportQueryKey,
@@ -62,7 +62,7 @@ export default function WorkerSetupPage() {
   const worker = profile.data;
   const completion = useMemo(() => {
     if (!worker) return 0;
-    const checks = [worker.displayName, worker.primaryRole, worker.homeCityState, worker.skills.length, worker.certifications.length];
+    const checks = [worker.displayName, worker.primaryRole, worker.homeCityState, worker.skills.length];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [worker]);
 
@@ -112,7 +112,7 @@ export default function WorkerSetupPage() {
       additionalRoles: String(form.get('additionalRoles') || '').split(',').map((item) => item.trim()).filter(Boolean),
       yearsExperience: Number(form.get('yearsExperience') || 0),
       skills: String(form.get('skills') || '').split(',').map((item) => item.trim()).filter(Boolean),
-      certifications: String(form.get('certifications') || '').split(',').map((item) => item.trim()).filter(Boolean),
+      certifications: worker.certifications,
       bio: String(form.get('bio') || '').trim() || null,
       emergencyContact: String(form.get('emergencyContact') || '').trim() || null,
       profilePhotoName: photoName || worker.profilePhotoName,
@@ -169,10 +169,10 @@ export default function WorkerSetupPage() {
         </section>
 
         <section className="card card-pad setup-section">
-          <div className="setup-section-head"><span className="setup-step">3</span><div><div className="eyebrow">Professional record</div><h2>Skills & credentials</h2><p className="subtitle">This is what can build your Career Passport.</p></div></div>
+          <div className="setup-section-head"><span className="setup-step">3</span><div><div className="eyebrow">Professional record</div><h2>Skills & Learning</h2><p className="subtitle">Skills live here. Certifications have one home in Learning so you do not have to enter the same credential twice.</p></div></div>
           <div className="form-grid">
             <div className="field full"><label htmlFor="skills">Skills</label><input id="skills" name="skills" defaultValue={worker.skills.join(', ')} placeholder="Rigging, cable, video wall, forklift" /></div>
-            <div className="field full"><label htmlFor="certifications">Certifications</label><input id="certifications" name="certifications" defaultValue={worker.certifications.join(', ')} placeholder="OSHA 10, CPR, Fall Protection" /></div>
+            <div className="field full"><div className="card card-pad"><div className="eyebrow">Certifications</div><h3 style={{ marginTop: 7 }}>Manage credentials in Learning</h3><p className="help-text">Learning tracks earned, expiring, expired, and planned credentials. Career Passport reads approved current credentials from there automatically.</p>{worker.certifications.length > 0 && <p className="help-text" style={{ marginTop: 10 }}>{worker.certifications.length} legacy profile credential{worker.certifications.length === 1 ? '' : 's'} will be preserved while the Learning wallet becomes the source of truth.</p>}<div className="form-actions" style={{ marginTop: 14 }}><Link href="/learning" className="btn btn-secondary"><BookOpenCheck size={18} /> Open Learning</Link></div></div></div>
             <div className="field full"><label htmlFor="bio">Short professional bio</label><textarea id="bio" name="bio" defaultValue={worker.bio || ''} placeholder="A few useful lines. No résumé essay required." /></div>
           </div>
         </section>
