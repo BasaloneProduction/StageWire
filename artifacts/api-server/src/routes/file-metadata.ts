@@ -8,6 +8,16 @@ const router: IRouter = Router();
 
 const FILE_KINDS = new Set(["certification", "document", "profile-photo"]);
 const MAX_METADATA_SIZE_BYTES = 1024 * 1024 * 1024;
+const fileRecordColumns = {
+  id: workerFileMetadata.id,
+  kind: workerFileMetadata.kind,
+  name: workerFileMetadata.name,
+  sizeBytes: workerFileMetadata.sizeBytes,
+  mimeType: workerFileMetadata.mimeType,
+  storageStatus: workerFileMetadata.storageStatus,
+  createdAt: workerFileMetadata.createdAt,
+  updatedAt: workerFileMetadata.updatedAt,
+};
 
 async function ensureFileOwner() {
   const ownerKey = currentWorkerOwnerKey();
@@ -65,16 +75,7 @@ router.get("/file-metadata", async (req, res, next) => {
     if (req.query.kind !== undefined && !kind) return res.status(400).json({ error: "Unknown file metadata kind." });
 
     const rows = await db
-      .select({
-        id: workerFileMetadata.id,
-        kind: workerFileMetadata.kind,
-        name: workerFileMetadata.name,
-        sizeBytes: workerFileMetadata.sizeBytes,
-        mimeType: workerFileMetadata.mimeType,
-        storageStatus: workerFileMetadata.storageStatus,
-        createdAt: workerFileMetadata.createdAt,
-        updatedAt: workerFileMetadata.updatedAt,
-      })
+      .select(fileRecordColumns)
       .from(workerFileMetadata)
       .where(kind
         ? and(eq(workerFileMetadata.ownerKey, ownerKey), eq(workerFileMetadata.kind, kind))
@@ -98,8 +99,22 @@ router.post("/file-metadata", async (req, res, next) => {
       return res.status(400).json({ error: "Check the file type, filename, and size before saving." });
     }
 
-    const created = await db.transaction(async (tx) => {
-      if (kind === "profile-photo") {
+    const result = await db.transaction(async (tx) => {
+      if (kind !== "profile-photo") {
+        const existing = (await tx
+          .select(fileRecordColumns)
+          .from(workerFileMetadata)
+          .where(and(
+            eq(workerFileMetadata.ownerKey, ownerKey),
+            eq(workerFileMetadata.kind, kind),
+            eq(workerFileMetadata.name, name),
+            eq(workerFileMetadata.sizeBytes, sizeBytes),
+            eq(workerFileMetadata.mimeType, mimeType),
+            eq(workerFileMetadata.storageStatus, "metadata"),
+          ))
+          .limit(1))[0];
+        if (existing) return { record: existing, created: false };
+      } else {
         await tx
           .delete(workerFileMetadata)
           .where(and(
@@ -109,7 +124,7 @@ router.post("/file-metadata", async (req, res, next) => {
           ));
       }
 
-      return (await tx.insert(workerFileMetadata).values({
+      const record = (await tx.insert(workerFileMetadata).values({
         ownerKey,
         kind,
         name,
@@ -117,19 +132,11 @@ router.post("/file-metadata", async (req, res, next) => {
         mimeType,
         storageKey: null,
         storageStatus: "metadata",
-      }).returning({
-        id: workerFileMetadata.id,
-        kind: workerFileMetadata.kind,
-        name: workerFileMetadata.name,
-        sizeBytes: workerFileMetadata.sizeBytes,
-        mimeType: workerFileMetadata.mimeType,
-        storageStatus: workerFileMetadata.storageStatus,
-        createdAt: workerFileMetadata.createdAt,
-        updatedAt: workerFileMetadata.updatedAt,
-      }))[0];
+      }).returning(fileRecordColumns))[0];
+      return { record, created: true };
     });
 
-    return res.status(201).json(created);
+    return res.status(result.created ? 201 : 200).json(result.record);
   } catch (error) {
     return next(error);
   }
