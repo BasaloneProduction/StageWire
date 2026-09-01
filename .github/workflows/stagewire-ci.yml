@@ -6,8 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# TEMPORARY: write access is used only by the branch-only regeneration step below.
+# Return this to contents: read immediately after Orval commits the stale outputs.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: stagewire-ci-${{ github.ref }}
@@ -33,10 +35,22 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify generated API clients
+      - name: Regenerate API clients
+        run: pnpm --dir lib/api-spec codegen
+      - name: Commit regenerated API clients
+        if: github.event_name == 'push' && github.ref == 'refs/heads/v1.4-active-call'
         run: |
-          pnpm --dir lib/api-spec codegen
-          git diff --exit-code -- lib/api-client-react/src/generated lib/api-zod/src/generated
+          if git diff --quiet -- lib/api-client-react/src/generated lib/api-zod/src/generated; then
+            echo "Generated API clients are already current."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib/api-client-react/src/generated lib/api-zod/src/generated
+            git commit -m "Regenerate API clients"
+            git push origin HEAD:v1.4-active-call
+          fi
+      - name: Verify generated API clients
+        run: git diff --exit-code -- lib/api-client-react/src/generated lib/api-zod/src/generated
       - name: Build shared library types
         run: pnpm run typecheck:libs
       - name: Test API record integrity
