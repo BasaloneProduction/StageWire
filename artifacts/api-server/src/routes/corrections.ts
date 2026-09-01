@@ -175,11 +175,13 @@ router.patch("/calls/:id/correct", async (req, res) => {
     const changed = Object.entries(patch).filter(([key, value]) => comparable(current[key as keyof typeof current]) !== comparable(value)).map(([key]) => labels[key] || key);
     if (changed.length === 0) return res.json({ id, corrected: false, changed: [] });
 
-    await db.update(calls).set(patch).where(eq(calls.id, id));
-    await db.insert(callNotes).values({
-      callId: id,
-      category: "correction",
-      text: `Worker corrected: ${changed.join(", ")}.`,
+    await db.transaction(async (tx) => {
+      await tx.update(calls).set(patch).where(eq(calls.id, id));
+      await tx.insert(callNotes).values({
+        callId: id,
+        category: "correction",
+        text: `Worker corrected: ${changed.join(", ")}.`,
+      });
     });
 
     return res.json({ id, corrected: true, changed });
@@ -222,21 +224,23 @@ router.patch("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
     const parkingDelta = (isParking(nextCategory) ? nextAmount : 0) - (isParking(current.category) ? current.amount : 0);
     const tollDelta = (isToll(nextCategory) ? nextAmount : 0) - (isToll(current.category) ? current.amount : 0);
 
-    await db.update(callExpenses).set({
-      amount: nextAmount,
-      category: nextCategory,
-      description: nextDescription,
-      receiptAttachmentName: nextReceiptName,
-    }).where(eq(callExpenses.id, expenseId));
-    await db.update(calls).set({
-      expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) + amountDelta).toFixed(2)),
-      parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) + parkingDelta).toFixed(2)),
-      tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) + tollDelta).toFixed(2)),
-    }).where(eq(calls.id, id));
-    await db.insert(callNotes).values({
-      callId: id,
-      category: "correction",
-      text: `Worker corrected ${nextCategory} expense #${expenseId}: ${changed.join(", ")}.`,
+    await db.transaction(async (tx) => {
+      await tx.update(callExpenses).set({
+        amount: nextAmount,
+        category: nextCategory,
+        description: nextDescription,
+        receiptAttachmentName: nextReceiptName,
+      }).where(eq(callExpenses.id, expenseId));
+      await tx.update(calls).set({
+        expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) + amountDelta).toFixed(2)),
+        parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) + parkingDelta).toFixed(2)),
+        tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) + tollDelta).toFixed(2)),
+      }).where(eq(calls.id, id));
+      await tx.insert(callNotes).values({
+        callId: id,
+        category: "correction",
+        text: `Worker corrected ${nextCategory} expense #${expenseId}: ${changed.join(", ")}.`,
+      });
     });
 
     return res.json({ id: expenseId, corrected: true, changed });
@@ -258,16 +262,18 @@ router.delete("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
   const current = (await db.select().from(callExpenses).where(eq(callExpenses.id, expenseId)).limit(1))[0];
   if (!current || current.callId !== id) return res.status(404).json({ error: "Expense not found on this Call Receipt." });
 
-  await db.delete(callExpenses).where(eq(callExpenses.id, expenseId));
-  await db.update(calls).set({
-    expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) - current.amount).toFixed(2)),
-    parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) - (isParking(current.category) ? current.amount : 0)).toFixed(2)),
-    tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) - (isToll(current.category) ? current.amount : 0)).toFixed(2)),
-  }).where(eq(calls.id, id));
-  await db.insert(callNotes).values({
-    callId: id,
-    category: "correction",
-    text: `Worker removed ${current.category} expense #${expenseId} (${current.amount.toFixed(2)}) from the Call Receipt.`,
+  await db.transaction(async (tx) => {
+    await tx.delete(callExpenses).where(eq(callExpenses.id, expenseId));
+    await tx.update(calls).set({
+      expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) - current.amount).toFixed(2)),
+      parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) - (isParking(current.category) ? current.amount : 0)).toFixed(2)),
+      tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) - (isToll(current.category) ? current.amount : 0)).toFixed(2)),
+    }).where(eq(calls.id, id));
+    await tx.insert(callNotes).values({
+      callId: id,
+      category: "correction",
+      text: `Worker removed ${current.category} expense #${expenseId} (${current.amount.toFixed(2)}) from the Call Receipt.`,
+    });
   });
 
   return res.json({ id: expenseId, removed: true });
