@@ -5,6 +5,7 @@ import SmartFinishCallPage from '@/pages/smart-finish-call';
 import WorkReceiptPage from '@/pages/work-receipt';
 import WorkerVaultPage from '@/pages/worker-vault';
 import CareerPassportV14Page from '@/pages/career-passport-v14';
+import WorkerSetupPage from '@/pages/worker-setup';
 
 export default function NotFound() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -17,6 +18,7 @@ export default function NotFound() {
   if (/^\/receipt\/\d+\/?$/.test(appPath)) return <WorkReceiptPage />;
   if (/^\/vault-v14\/?$/.test(appPath)) return <WorkerVaultPage />;
   if (/^\/passport-v14\/?$/.test(appPath)) return <CareerPassportV14Page />;
+  if (/^\/worker-setup\/?$/.test(appPath)) return <WorkerSetupPage />;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
