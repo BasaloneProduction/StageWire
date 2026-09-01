@@ -23,6 +23,10 @@ function cleanIssuer(value: string | undefined) {
   return value?.trim() ?? "";
 }
 
+function isValidationError(error: unknown) {
+  return Boolean(error && typeof error === "object" && "issues" in error);
+}
+
 async function ensureCredentialOwner() {
   const ownerKey = currentWorkerOwnerKey();
   const existing = await db
@@ -86,6 +90,7 @@ router.post("/credentials", async (req, res, next) => {
     }).returning())[0];
     return res.status(201).json(CreateCredentialResponse.parse(created));
   } catch (error) {
+    if (isValidationError(error)) return res.status(400).json({ error: "Check the credential name, status, and expiration date before saving." });
     return next(error);
   }
 });
@@ -110,6 +115,7 @@ router.patch("/credentials/:credentialId", async (req, res, next) => {
     }).where(ownerCredentialWhere(credentialId)).returning())[0];
     return res.json(UpdateCredentialResponse.parse(updated));
   } catch (error) {
+    if (isValidationError(error)) return res.status(400).json({ error: "Check the credential update before saving." });
     return next(error);
   }
 });
@@ -125,6 +131,7 @@ router.delete("/credentials/:credentialId", async (req, res, next) => {
     if (removed.length === 0) return res.status(404).json({ error: "Credential not found." });
     return res.status(204).send();
   } catch (error) {
+    if (isValidationError(error)) return res.status(400).json({ error: "That credential ID is not valid." });
     return next(error);
   }
 });
