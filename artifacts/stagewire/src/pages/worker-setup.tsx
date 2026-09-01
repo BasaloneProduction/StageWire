@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BookOpenCheck, Camera, CheckCircle2, LockKeyhole, Save, ShieldCheck, UserRound } from 'lucide-react';
 import { Link } from 'wouter';
@@ -18,6 +18,14 @@ type ShareSettings = {
   shareSkills: boolean;
   shareCertifications: boolean;
 };
+type PhotoRecord = {
+  id: number;
+  kind: 'profile-photo';
+  name: string;
+  sizeBytes: number;
+  mimeType: string;
+  storageStatus: 'metadata' | 'stored';
+};
 
 const LEGACY_SHARE_KEY = 'stagewire-share-settings-v14';
 const PHOTO_KEY = 'stagewire-profile-photo-preview-v14';
@@ -30,6 +38,34 @@ function readLegacyShareSettings(): ShareSettings | null {
   return null;
 }
 
+async function photoApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { credentials: 'same-origin', ...init });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : 'StageWire could not save that profile photo.');
+  return body as T;
+}
+
+async function savePhotoMetadata(file: File) {
+  return photoApi<PhotoRecord>('/api/file-metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind: 'profile-photo', name: file.name, sizeBytes: file.size, mimeType: file.type || '' }),
+  });
+}
+
+async function savePhotoBytes(record: PhotoRecord, file: File): Promise<PhotoRecord | null> {
+  const response = await fetch(`/api/file-metadata/${record.id}/content`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    body: file,
+  });
+  if (response.status === 503 || response.status === 405) return null;
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : 'The photo name was saved, but the image could not be stored.');
+  return body as PhotoRecord;
+}
+
 export default function WorkerSetupPage() {
   const profile = useGetProfile();
   const updateProfile = useUpdateProfile();
@@ -38,6 +74,27 @@ export default function WorkerSetupPage() {
   const [shareDraft, setShareDraft] = useState<ShareSettings | null>(readLegacyShareSettings);
   const [photoName, setPhotoName] = useState('');
   const [photoPreview, setPhotoPreview] = useState(() => localStorage.getItem(PHOTO_KEY) || '');
+  const [photoStorageStatus, setPhotoStorageStatus] = useState<'none' | 'local' | 'stored'>(() => localStorage.getItem(PHOTO_KEY) ? 'local' : 'none');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoNotice, setPhotoNotice] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/file-metadata?kind=profile-photo', { credentials: 'same-origin' })
+      .then(async (response) => response.ok ? response.json() as Promise<PhotoRecord[]> : [])
+      .then((records) => {
+        if (cancelled) return;
+        const stored = [...records].reverse().find((record) => record.storageStatus === 'stored');
+        if (!stored) return;
+        setPhotoName(stored.name);
+        setPhotoPreview(`/api/file-metadata/${stored.id}/content`);
+        setPhotoStorageStatus('stored');
+        setPhotoNotice('Profile photo is stored privately and can follow your worker account.');
+        try { localStorage.removeItem(PHOTO_KEY); } catch {}
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
 
   const worker = profile.data;
   const completion = useMemo(() => {
@@ -62,16 +119,44 @@ export default function WorkerSetupPage() {
 
   const pickPhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.currentTarget.value = '';
     if (!file) return;
     setPhotoName(file.name);
-    if (!file.type.startsWith('image/')) return;
+    setPhotoNotice('');
+    if (!file.type.startsWith('image/')) {
+      setPhotoNotice('Profile photos must be image files.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : '';
       setPhotoPreview(result);
+      setPhotoStorageStatus('local');
       try { localStorage.setItem(PHOTO_KEY, result); } catch {}
     };
     reader.readAsDataURL(file);
+
+    setPhotoBusy(true);
+    void (async () => {
+      try {
+        const metadata = await savePhotoMetadata(file);
+        const stored = await savePhotoBytes(metadata, file);
+        if (!stored) {
+          setPhotoNotice('The photo name is saved, but this build does not have private image storage enabled. The preview stays on this browser only.');
+          return;
+        }
+        setPhotoName(stored.name);
+        setPhotoPreview(`/api/file-metadata/${stored.id}/content`);
+        setPhotoStorageStatus('stored');
+        setPhotoNotice('Profile photo stored privately. It can now follow your worker account.');
+        try { localStorage.removeItem(PHOTO_KEY); } catch {}
+      } catch (error) {
+        setPhotoNotice(error instanceof Error ? error.message : 'The local preview is safe, but StageWire could not store that image yet.');
+      } finally {
+        setPhotoBusy(false);
+      }
+    })();
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -158,12 +243,12 @@ export default function WorkerSetupPage() {
         </section>
 
         <section className="card card-pad setup-section">
-          <div className="setup-section-head"><span className="setup-step">4</span><div><div className="eyebrow">File records</div><h2>Remember the file list across devices.</h2><p className="subtitle">Certification/document filename records now follow your worker account. The underlying file contents are still not uploaded; secure object storage remains a production requirement.</p></div></div>
-          <div className="privacy-rule" style={{ marginBottom: 18 }}><ShieldCheck size={20} /><strong>Keep the actual certification or document somewhere safe until StageWire secure storage is wired.</strong></div>
+          <div className="setup-section-head"><span className="setup-step">4</span><div><div className="eyebrow">Private files</div><h2>Keep the record—and the file when storage is available.</h2><p className="subtitle">Filename records follow your worker account. Development can now store private file bytes too; production still fails closed until the real object-storage provider is configured.</p></div></div>
+          <div className="privacy-rule" style={{ marginBottom: 18 }}><ShieldCheck size={20} /><strong>Metadata-only records never pretend the underlying file was uploaded.</strong></div>
           <div className="upload-grid">
             <div className="upload-card">
               <div className="upload-preview">{photoPreview ? <img src={photoPreview} alt="Profile preview" /> : <UserRound size={44} />}</div>
-              <div><h3>Profile photo</h3><p className="help-text">Optional. The photo preview itself still stays local to this browser. StageWire will not claim it followed your account until secure image storage exists.</p><label className="btn btn-secondary file-button"><Camera size={18} /> Choose photo<input type="file" accept="image/*" onChange={pickPhoto} /></label>{(photoName || worker.profilePhotoName) && <div className="file-name">{photoName || worker.profilePhotoName}</div>}</div>
+              <div><h3>Profile photo</h3><p className="help-text">Optional. {photoStorageStatus === 'stored' ? 'Stored privately and available from your worker record.' : photoStorageStatus === 'local' ? 'Local preview only until private storage succeeds.' : 'Choose an image when you want one.'}</p><label className={`btn btn-secondary file-button ${photoBusy ? 'disabled' : ''}`}><Camera size={18} /> {photoBusy ? 'Storing…' : 'Choose photo'}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={photoBusy} onChange={pickPhoto} /></label>{(photoName || worker.profilePhotoName) && <div className="file-name">{photoName || worker.profilePhotoName}</div>}{photoNotice && <p className="help-text" role="status" style={{ marginTop: 10 }}>{photoNotice}</p>}</div>
             </div>
             <WorkerFileMetadataPanel />
           </div>
@@ -177,7 +262,7 @@ export default function WorkerSetupPage() {
             <PrivacyToggle label="Skills" detail="Professional capabilities" checked={share.shareSkills} onChange={(value) => saveShare({ ...share, shareSkills: value })} />
             <PrivacyToggle label="Certifications" detail="Credential names, not private files" checked={share.shareCertifications} onChange={(value) => saveShare({ ...share, shareCertifications: value })} />
           </div>
-          <div className="privacy-rule"><ShieldCheck size={20} /><strong>Phone, email, emergency contact, and file contents remain private.</strong></div>
+          <div className="privacy-rule"><ShieldCheck size={20} /><strong>Phone, email, emergency contact, and private files remain private.</strong></div>
         </section>
 
         {updateProfile.error && <div className="error-box" role="alert"><strong>{(updateProfile.error as Error).message || 'Profile could not be saved.'}</strong></div>}
