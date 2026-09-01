@@ -1199,6 +1199,83 @@ export const DeleteCredentialResponse = zod.void()
 
 
 /**
+ * @summary Get the worker-owned Crew Kit state
+ */
+export const getCrewKitStateResponseCustomItemsItemIdMax = 100;
+
+export const getCrewKitStateResponseCustomItemsItemRoleMax = 80;
+
+export const getCrewKitStateResponseCustomItemsItemLabelMax = 160;
+
+export const getCrewKitStateResponseCustomItemsMax = 200;
+
+export const getCrewKitStateResponseReadyMarksItemMax = 220;
+
+export const getCrewKitStateResponseReadyMarksMax = 500;
+
+
+
+export const GetCrewKitStateResponse = zod.object({
+  "customItems": zod.array(zod.object({
+  "id": zod.string().min(1).max(getCrewKitStateResponseCustomItemsItemIdMax),
+  "role": zod.string().min(1).max(getCrewKitStateResponseCustomItemsItemRoleMax),
+  "label": zod.string().min(1).max(getCrewKitStateResponseCustomItemsItemLabelMax)
+})).max(getCrewKitStateResponseCustomItemsMax),
+  "readyMarks": zod.array(zod.string().min(1).max(getCrewKitStateResponseReadyMarksItemMax)).max(getCrewKitStateResponseReadyMarksMax)
+})
+
+
+/**
+ * @summary Replace the worker-owned Crew Kit state
+ */
+export const updateCrewKitStateBodyCustomItemsItemIdMax = 100;
+
+export const updateCrewKitStateBodyCustomItemsItemRoleMax = 80;
+
+export const updateCrewKitStateBodyCustomItemsItemLabelMax = 160;
+
+export const updateCrewKitStateBodyCustomItemsMax = 200;
+
+export const updateCrewKitStateBodyReadyMarksItemMax = 220;
+
+export const updateCrewKitStateBodyReadyMarksMax = 500;
+
+
+
+export const UpdateCrewKitStateBody = zod.object({
+  "customItems": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateCrewKitStateBodyCustomItemsItemIdMax),
+  "role": zod.string().min(1).max(updateCrewKitStateBodyCustomItemsItemRoleMax),
+  "label": zod.string().min(1).max(updateCrewKitStateBodyCustomItemsItemLabelMax)
+})).max(updateCrewKitStateBodyCustomItemsMax),
+  "readyMarks": zod.array(zod.string().min(1).max(updateCrewKitStateBodyReadyMarksItemMax)).max(updateCrewKitStateBodyReadyMarksMax)
+})
+
+export const updateCrewKitStateResponseCustomItemsItemIdMax = 100;
+
+export const updateCrewKitStateResponseCustomItemsItemRoleMax = 80;
+
+export const updateCrewKitStateResponseCustomItemsItemLabelMax = 160;
+
+export const updateCrewKitStateResponseCustomItemsMax = 200;
+
+export const updateCrewKitStateResponseReadyMarksItemMax = 220;
+
+export const updateCrewKitStateResponseReadyMarksMax = 500;
+
+
+
+export const UpdateCrewKitStateResponse = zod.object({
+  "customItems": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateCrewKitStateResponseCustomItemsItemIdMax),
+  "role": zod.string().min(1).max(updateCrewKitStateResponseCustomItemsItemRoleMax),
+  "label": zod.string().min(1).max(updateCrewKitStateResponseCustomItemsItemLabelMax)
+})).max(updateCrewKitStateResponseCustomItemsMax),
+  "readyMarks": zod.array(zod.string().min(1).max(updateCrewKitStateResponseReadyMarksItemMax)).max(updateCrewKitStateResponseReadyMarksMax)
+})
+
+
+/**
  * @summary Get the worker-owned Vault
  */
 export const getVaultResponseCallsItemMinimumHoursMin = 0;

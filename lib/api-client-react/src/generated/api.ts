@@ -33,6 +33,7 @@ import type {
   Credential,
   CredentialInput,
   CredentialUpdateInput,
+  CrewKitState,
   DashboardSummary,
   ErrorResponse,
   ExpenseInput,
@@ -1694,6 +1695,154 @@ export const useDeleteCredential = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteCredentialMutationOptions(options));
+    }
+
+export const getGetCrewKitStateUrl = () => {
+
+
+
+
+  return `/api/crew-kit-state`
+}
+
+/**
+ * @summary Get the worker-owned Crew Kit state
+ */
+export const getCrewKitState = async ( options?: Parameters<typeof customFetch>[1]): Promise<CrewKitState> => {
+
+  return customFetch<CrewKitState>(getGetCrewKitStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCrewKitStateQueryKey = () => {
+    return [
+    `/api/crew-kit-state`
+    ] as const;
+    }
+
+
+export const getGetCrewKitStateQueryOptions = <TData = Awaited<ReturnType<typeof getCrewKitState>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrewKitState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCrewKitStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrewKitState>>> = ({ signal }) => getCrewKitState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCrewKitState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCrewKitStateQueryResult = NonNullable<Awaited<ReturnType<typeof getCrewKitState>>>
+export type GetCrewKitStateQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the worker-owned Crew Kit state
+ */
+
+export function useGetCrewKitState<TData = Awaited<ReturnType<typeof getCrewKitState>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrewKitState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCrewKitStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateCrewKitStateUrl = () => {
+
+
+
+
+  return `/api/crew-kit-state`
+}
+
+/**
+ * @summary Replace the worker-owned Crew Kit state
+ */
+export const updateCrewKitState = async (crewKitState: CrewKitState, options?: Parameters<typeof customFetch>[1]): Promise<CrewKitState> => {
+
+  return customFetch<CrewKitState>(getUpdateCrewKitStateUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crewKitState)
+  }
+);}
+
+
+
+
+
+export const getUpdateCrewKitStateMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrewKitState>>, TError,{data: BodyType<CrewKitState>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCrewKitState>>, TError,{data: BodyType<CrewKitState>}, TContext> => {
+
+const mutationKey = ['updateCrewKitState'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCrewKitState>>, {data: BodyType<CrewKitState>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCrewKitState(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCrewKitStateMutationResult = NonNullable<Awaited<ReturnType<typeof updateCrewKitState>>>
+    export type UpdateCrewKitStateMutationBody = BodyType<CrewKitState>
+    export type UpdateCrewKitStateMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Replace the worker-owned Crew Kit state
+ */
+export const useUpdateCrewKitState = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCrewKitState>>, TError,{data: BodyType<CrewKitState>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCrewKitState>>,
+        TError,
+        {data: BodyType<CrewKitState>},
+        TContext
+      > => {
+      return useMutation(getUpdateCrewKitStateMutationOptions(options));
     }
 
 export const getGetVaultUrl = () => {

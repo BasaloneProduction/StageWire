@@ -66,6 +66,35 @@ export interface CredentialUpdateInput {
   status?: CredentialUpdateInputStatus;
 }
 
+export interface CrewKitCustomItem {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  role: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  label: string;
+}
+
+export interface CrewKitState {
+  /** @maxItems 200 */
+  customItems: CrewKitCustomItem[];
+  /**
+     * @maxItems 500
+     * @items.minLength 1
+     * @items.maxLength 220
+     */
+  readyMarks: string[];
+}
+
 export interface WorkerProfile {
   id: number;
   displayName: string;

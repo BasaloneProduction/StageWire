@@ -14,6 +14,8 @@ tags:
     description: Worker profile operations
   - name: learning
     description: Worker-owned credential operations
+  - name: crewkit
+    description: Worker-owned Crew Kit preparation state
   - name: calls
     description: Work call operations
   - name: vault
@@ -472,6 +474,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /crew-kit-state:
+    get:
+      operationId: getCrewKitState
+      tags: [crewkit]
+      summary: Get the worker-owned Crew Kit state
+      responses:
+        "200":
+          description: Crew Kit state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrewKitState"
+    put:
+      operationId: updateCrewKitState
+      tags: [crewkit]
+      summary: Replace the worker-owned Crew Kit state
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrewKitState"
+      responses:
+        "200":
+          description: Updated Crew Kit state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrewKitState"
+        "400":
+          description: Invalid Crew Kit state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /vault:
     get:
       operationId: getVault
@@ -578,6 +616,40 @@ components:
         status:
           type: string
           enum: [current, planned]
+
+    CrewKitCustomItem:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        role:
+          type: string
+          minLength: 1
+          maxLength: 80
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+      required: [id, role, label]
+    CrewKitState:
+      type: object
+      properties:
+        customItems:
+          type: array
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/CrewKitCustomItem"
+        readyMarks:
+          type: array
+          maxItems: 500
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 220
+      required: [customItems, readyMarks]
 
     WorkerProfile:
       type: object

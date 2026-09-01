@@ -27,6 +27,8 @@ export * from './credentialInputStatus';
 export * from './credentialStatus';
 export * from './credentialUpdateInput';
 export * from './credentialUpdateInputStatus';
+export * from './crewKitCustomItem';
+export * from './crewKitState';
 export * from './dashboardSummary';
 export * from './errorResponse';
 export * from './expenseInput';
