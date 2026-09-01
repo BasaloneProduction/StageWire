@@ -1,16 +1,29 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
-import { calls, workerProfiles } from "@workspace/db";
-import { PREVIEW_OWNER_KEY, ownedCallWhere, ownedCallsWhere, ownedProfileWhere } from "./worker-owner.ts";
+
+const schema = fs.readFileSync(new URL("../../../../lib/db/src/schema/stagewire.ts", import.meta.url), "utf8");
+const ownerHelpers = fs.readFileSync(new URL("./worker-owner.ts", import.meta.url), "utf8");
+const routeIndex = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
 
 test("worker-backed tables keep an explicit owner key", () => {
-  assert.ok(calls.ownerKey, "calls must keep an owner key before multi-worker auth is enabled");
-  assert.ok(workerProfiles.ownerKey, "worker profiles must keep an owner key before multi-worker auth is enabled");
+  const ownerColumns = schema.match(/ownerKey:\s*text\("owner_key"\)/g) ?? [];
+  assert.equal(ownerColumns.length, 2, "workerProfiles and calls must both keep an owner key");
+  assert.match(schema, /worker_profiles_owner_key_unique/, "each owner must have one worker profile");
+  assert.match(schema, /calls_owner_key_idx/, "owner-scoped call lookup must stay indexed");
 });
 
-test("preview ownership helpers always produce database predicates", () => {
-  assert.equal(PREVIEW_OWNER_KEY, "preview-worker-v14");
-  assert.ok(ownedCallWhere(123));
-  assert.ok(ownedCallsWhere());
-  assert.ok(ownedProfileWhere());
+test("preview ownership helpers stay fail-closed around one owner", () => {
+  assert.match(ownerHelpers, /PREVIEW_OWNER_KEY\s*=\s*"preview-worker-v14"/);
+  assert.match(ownerHelpers, /eq\(calls\.ownerKey, PREVIEW_OWNER_KEY\)/);
+  assert.match(ownerHelpers, /eq\(workerProfiles\.ownerKey, PREVIEW_OWNER_KEY\)/);
+});
+
+test("ownership gate runs before every worker call route", () => {
+  const gate = routeIndex.indexOf("router.use(ownershipGateRouter)");
+  const corrections = routeIndex.indexOf("router.use(correctionRouter)");
+  const openCalls = routeIndex.indexOf("router.use(openCallEditRouter)");
+  const stagewire = routeIndex.indexOf("router.use(stagewireRouter)");
+  assert.ok(gate >= 0, "ownership gate must remain mounted");
+  assert.ok(gate < corrections && gate < openCalls && gate < stagewire, "ownership gate must run before worker call routers");
 });
