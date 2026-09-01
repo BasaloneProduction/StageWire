@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import type { VerifiedExternalIdentity, VerifiedIdentityResolver } from "./authenticated-worker-middleware";
 import { bootstrapWorkerAccountForIdentity } from "./worker-account";
 import {
@@ -16,7 +16,7 @@ async function verifiedIdentity(resolveVerifiedIdentity: VerifiedIdentityResolve
   return resolveVerifiedIdentity(req);
 }
 
-function setSessionCookie(res: Parameters<IRouter["use"]>[0] extends never ? never : any, token: string, expiresAt: string) {
+function setSessionCookie(res: Response, token: string, expiresAt: string) {
   res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(process.env.NODE_ENV, expiresAt));
 }
 
