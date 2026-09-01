@@ -19,6 +19,15 @@ test("Crew Kit state belongs to the worker record", () => {
   assert.match(routes, /router\.use\(crewKitRouter\)/);
 });
 
+test("finished or missing call prep marks are pruned without deleting personal role items", () => {
+  assert.match(route, /pruneFinishedCallMarks/);
+  assert.match(route, /eq\(calls\.ownerKey, ownerKey\)/, "mark cleanup must only inspect the current worker's calls");
+  assert.match(route, /call\.status !== "finished"/);
+  assert.match(route, /\^call-\(\\d\+\):/);
+  assert.match(route, /if \(!mark\.startsWith\("call-"\)\) return true/, "general role ready marks must not be pruned as finished calls");
+  assert.match(route, /return readyMarks\.length === state\.readyMarks\.length \? state : \{ \.\.\.state, readyMarks \}/, "cleanup must preserve custom items");
+});
+
 test("Crew Kit UI uses server state and keeps browser data migration-only", () => {
   assert.match(page, /useGetCrewKitState/);
   assert.match(page, /useUpdateCrewKitState/);
