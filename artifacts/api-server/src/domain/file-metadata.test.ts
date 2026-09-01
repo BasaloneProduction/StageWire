@@ -34,8 +34,17 @@ test("file metadata validates type, filename, and bounded size", () => {
   assert.match(route, /status\(400\)/);
 });
 
+test("document and certification metadata saves are idempotent", () => {
+  assert.match(route, /kind !== "profile-photo"/);
+  assert.match(route, /eq\(workerFileMetadata\.name, name\)/);
+  assert.match(route, /eq\(workerFileMetadata\.sizeBytes, sizeBytes\)/);
+  assert.match(route, /eq\(workerFileMetadata\.mimeType, mimeType\)/);
+  assert.match(route, /return \{ record: existing, created: false \}/);
+  assert.match(route, /res\.status\(result\.created \? 201 : 200\)/, "retries must return the existing metadata record instead of duplicating it");
+});
+
 test("profile photo metadata keeps one metadata-only current choice per worker", () => {
-  assert.match(route, /kind === "profile-photo"/);
+  assert.match(route, /kind !== "profile-photo"[\s\S]*else \{/);
   assert.match(route, /eq\(workerFileMetadata\.kind, "profile-photo"\)/);
   assert.match(route, /eq\(workerFileMetadata\.storageStatus, "metadata"\)/);
   assert.match(route, /db\.transaction/);
