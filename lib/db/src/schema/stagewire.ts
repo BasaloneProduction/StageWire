@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -54,6 +55,21 @@ export const workerSessions = pgTable("worker_sessions", {
   index("worker_sessions_owner_key_idx").on(table.ownerKey),
   index("worker_sessions_identity_id_idx").on(table.identityId),
   index("worker_sessions_expires_at_idx").on(table.expiresAt),
+]);
+
+export const workerCredentials = pgTable("worker_credentials", {
+  id: serial("id").primaryKey(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  issuer: text("issuer").notNull().default(""),
+  expires: date("expires"),
+  status: text("status").notNull().default("current"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => [
+  index("worker_credentials_owner_key_idx").on(table.ownerKey),
+  index("worker_credentials_owner_expires_idx").on(table.ownerKey, table.expires),
+  check("worker_credentials_status_check", sql`${table.status} in ('current', 'planned')`),
 ]);
 
 export const calls = pgTable("calls", {
