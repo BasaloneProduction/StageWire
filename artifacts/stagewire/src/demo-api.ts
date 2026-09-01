@@ -232,6 +232,15 @@ export function installDemoApi() {
     if (!call) return json({ error: 'Call not found' }, 404);
 
     if (!tail && method === 'GET') return json(call);
+    if (!tail && method === 'DELETE') {
+      if (call.status !== 'upcoming' || call.arrivalAt || call.actualStart) return json({ error: 'Only a future call with no arrival or paid-work record can be removed. Active and finished work stays in StageWire.' }, 409);
+      state.calls = state.calls.filter((candidate) => candidate.id !== id);
+      delete state.checklist[id];
+      delete state.notes[id];
+      delete state.expenses[id];
+      save(state);
+      return json({ id, removed: true });
+    }
     if (tail === 'workday' && method === 'GET') {
       const newestFirst = (items: any[]) => [...items].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       return json({ call, checklist: { items: state.checklist[id] || [] }, notes: newestFirst(state.notes[id] || []), expenses: newestFirst(state.expenses[id] || []) });
