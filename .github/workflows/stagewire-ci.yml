@@ -33,6 +33,10 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Verify generated API clients
+        run: |
+          pnpm --dir lib/api-spec codegen
+          git diff --exit-code -- lib/api-client-react/src/generated lib/api-zod/src/generated
       - name: Build shared library types
         run: pnpm run typecheck:libs
       - name: Test API record integrity
