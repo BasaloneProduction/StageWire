@@ -29,6 +29,10 @@ export const workerProfiles = pgTable("worker_profiles", {
   emergencyContact: text("emergency_contact"),
   profilePhotoName: text("profile_photo_name"),
   privateByDefault: boolean("private_by_default").notNull().default(true),
+  sharePhoto: boolean("share_photo").notNull().default(false),
+  shareHomeBase: boolean("share_home_base").notNull().default(false),
+  shareSkills: boolean("share_skills").notNull().default(true),
+  shareCertifications: boolean("share_certifications").notNull().default(true),
 }, (table) => [
   uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),
 ]);
