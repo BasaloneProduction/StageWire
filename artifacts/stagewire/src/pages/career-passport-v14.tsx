@@ -5,17 +5,18 @@ import { useGetPassport, useGetProfile, useListCredentials, type Credential } fr
 
 type ShareSettings = { sharePhoto: boolean; shareHomeBase: boolean; shareSkills: boolean; shareCertifications: boolean };
 type PassportCredential = { name: string; issuer: string; expires: string; state: 'current' | 'expiring' | 'profile' };
-const SHARE_KEY = 'stagewire-share-settings-v14';
+const LEGACY_SHARE_KEY = 'stagewire-share-settings-v14';
 const PHOTO_KEY = 'stagewire-profile-photo-preview-v14';
-function settings(): ShareSettings { try { return { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true, ...JSON.parse(localStorage.getItem(SHARE_KEY) || '{}') }; } catch { return { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true }; } }
+function legacySettings(): ShareSettings | null { try { const raw = localStorage.getItem(LEGACY_SHARE_KEY); return raw ? { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true, ...JSON.parse(raw) } : null; } catch { return null; } }
 function dateOnly(value: string | null | undefined) { return value ? value.slice(0, 10) : ''; }
 function daysUntil(date: string) { if (!date) return null; const target = new Date(`${date}T12:00:00`).getTime(); const today = new Date(); today.setHours(12,0,0,0); return Math.ceil((target - today.getTime()) / 86400000); }
 function isShareableCredential(cert: Credential) { if (cert.status === 'planned') return false; const days = daysUntil(dateOnly(cert.expires)); return days === null || days >= 0; }
 function expirationLabel(date: string) { if (!date) return ''; const value = new Date(`${date}T12:00:00`); return Number.isNaN(value.getTime()) ? date : new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(value); }
 export default function CareerPassportV14Page() {
-  const passport = useGetPassport(); const profile = useGetProfile(); const credentialQuery = useListCredentials(); const data = passport.data; const worker = profile.data; const share = settings(); const photo = localStorage.getItem(PHOTO_KEY) || ''; const [copied, setCopied] = useState(false);
+  const passport = useGetPassport(); const profile = useGetProfile(); const credentialQuery = useListCredentials(); const data = passport.data; const worker = profile.data; const photo = localStorage.getItem(PHOTO_KEY) || ''; const [copied, setCopied] = useState(false);
   if (passport.isLoading || profile.isLoading || credentialQuery.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Building Career Passport…</h2></div></div>;
-  if (passport.isError || credentialQuery.isError || !data) return <div className="page-wrap"><div className="error-box"><strong>Career Passport could not be opened.</strong><button className="btn btn-quiet" onClick={() => { passport.refetch(); credentialQuery.refetch(); }}>Try again</button></div></div>;
+  if (passport.isError || profile.isError || credentialQuery.isError || !data || !worker) return <div className="page-wrap"><div className="error-box"><strong>Career Passport could not be opened.</strong><button className="btn btn-quiet" onClick={() => { passport.refetch(); profile.refetch(); credentialQuery.refetch(); }}>Try again</button></div></div>;
+  const share: ShareSettings = legacySettings() ?? { sharePhoto: worker.sharePhoto, shareHomeBase: worker.shareHomeBase, shareSkills: worker.shareSkills, shareCertifications: worker.shareCertifications };
   const totalHours = data.experience.reduce((sum, item) => sum + item.hours, 0);
   const learned = (credentialQuery.data || []).filter(isShareableCredential);
   const learnedByName = new Map(learned.map((cert) => [cert.name.trim().toLowerCase(), cert]));

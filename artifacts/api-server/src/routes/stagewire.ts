@@ -354,6 +354,10 @@ router.put("/profile", async (req, res) => {
           emergencyContact: input.emergencyContact === undefined ? current.emergencyContact : asNullable(input.emergencyContact),
           profilePhotoName: input.profilePhotoName === undefined ? current.profilePhotoName : asNullable(input.profilePhotoName),
           privateByDefault: true,
+          sharePhoto: input.sharePhoto ?? current.sharePhoto,
+          shareHomeBase: input.shareHomeBase ?? current.shareHomeBase,
+          shareSkills: input.shareSkills ?? current.shareSkills,
+          shareCertifications: input.shareCertifications ?? current.shareCertifications,
         })
         .where(and(eq(workerProfiles.id, current.id), ownedProfileWhere()))
         .returning()

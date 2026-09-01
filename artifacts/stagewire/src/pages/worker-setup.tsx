@@ -19,16 +19,16 @@ type ShareSettings = {
 
 type LocalFile = { name: string; size: number; type: string };
 
-const SHARE_KEY = 'stagewire-share-settings-v14';
+const LEGACY_SHARE_KEY = 'stagewire-share-settings-v14';
 const FILES_KEY = 'stagewire-profile-files-v14';
 const PHOTO_KEY = 'stagewire-profile-photo-preview-v14';
 
-function readShareSettings(): ShareSettings {
+function readLegacyShareSettings(): ShareSettings | null {
   try {
-    const raw = localStorage.getItem(SHARE_KEY);
+    const raw = localStorage.getItem(LEGACY_SHARE_KEY);
     if (raw) return { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true, ...JSON.parse(raw) };
   } catch {}
-  return { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true };
+  return null;
 }
 
 function readFiles(): { certifications: LocalFile[]; documents: LocalFile[] } {
@@ -54,7 +54,7 @@ export default function WorkerSetupPage() {
   const updateProfile = useUpdateProfile();
   const client = useQueryClient();
   const [saved, setSaved] = useState(false);
-  const [share, setShare] = useState<ShareSettings>(readShareSettings);
+  const [shareDraft, setShareDraft] = useState<ShareSettings | null>(readLegacyShareSettings);
   const [files, setFiles] = useState(readFiles);
   const [photoName, setPhotoName] = useState('');
   const [photoPreview, setPhotoPreview] = useState(() => localStorage.getItem(PHOTO_KEY) || '');
@@ -69,9 +69,15 @@ export default function WorkerSetupPage() {
   if (profile.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Opening worker setup…</h2></div></div>;
   if (profile.isError || !worker) return <div className="page-wrap"><div className="error-box"><strong>Worker setup could not load.</strong><button className="btn btn-quiet" onClick={() => profile.refetch()}>Try again</button></div></div>;
 
+  const share: ShareSettings = shareDraft ?? {
+    sharePhoto: worker.sharePhoto,
+    shareHomeBase: worker.shareHomeBase,
+    shareSkills: worker.shareSkills,
+    shareCertifications: worker.shareCertifications,
+  };
+
   const saveShare = (next: ShareSettings) => {
-    setShare(next);
-    localStorage.setItem(SHARE_KEY, JSON.stringify(next));
+    setShareDraft(next);
   };
 
   const pickPhoto = (event: ChangeEvent<HTMLInputElement>) => {
@@ -116,6 +122,10 @@ export default function WorkerSetupPage() {
       bio: String(form.get('bio') || '').trim() || null,
       emergencyContact: String(form.get('emergencyContact') || '').trim() || null,
       profilePhotoName: photoName || worker.profilePhotoName,
+      sharePhoto: share.sharePhoto,
+      shareHomeBase: share.shareHomeBase,
+      shareSkills: share.shareSkills,
+      shareCertifications: share.shareCertifications,
     };
 
     updateProfile.mutate({ data: payload }, {
@@ -123,6 +133,8 @@ export default function WorkerSetupPage() {
         client.setQueryData(getGetProfileQueryKey(), result);
         client.invalidateQueries({ queryKey: getGetProfileQueryKey() });
         client.invalidateQueries({ queryKey: getGetPassportQueryKey() });
+        try { localStorage.removeItem(LEGACY_SHARE_KEY); } catch {}
+        setShareDraft(null);
         setSaved(true);
         window.setTimeout(() => setSaved(false), 3000);
       },
@@ -191,7 +203,7 @@ export default function WorkerSetupPage() {
         </section>
 
         <section className="card card-pad setup-section">
-          <div className="setup-section-head"><span className="setup-step">5</span><div><div className="eyebrow">Sharing controls</div><h2>You choose what leaves the Vault.</h2><p className="subtitle">These settings affect Career Passport preview only. Private contact information is not included.</p></div></div>
+          <div className="setup-section-head"><span className="setup-step">5</span><div><div className="eyebrow">Sharing controls</div><h2>You choose what leaves the Vault.</h2><p className="subtitle">Save Worker Setup to keep these Career Passport choices with your worker record across signed-in devices. Private contact information is never included.</p></div></div>
           <div className="privacy-list">
             <PrivacyToggle label="Profile photo" detail="Off by default" checked={share.sharePhoto} onChange={(value) => saveShare({ ...share, sharePhoto: value })} />
             <PrivacyToggle label="Home base" detail="City/state only" checked={share.shareHomeBase} onChange={(value) => saveShare({ ...share, shareHomeBase: value })} />
