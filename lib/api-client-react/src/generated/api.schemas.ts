@@ -366,7 +366,5 @@ export interface DashboardSummary {
   grossThisMonth: number;
   /** @nullable */
   upcomingCall: Call | null;
-  /** @nullable */
-  activeCall: Call | null;
 }
 
