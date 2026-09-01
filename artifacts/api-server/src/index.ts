@@ -1,5 +1,8 @@
 import app from "./app";
+import { assertReleaseSafety } from "./domain/release-safety";
 import { logger } from "./lib/logger";
+
+assertReleaseSafety(process.env["NODE_ENV"]);
 
 const rawPort = process.env["PORT"];
 
