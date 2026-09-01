@@ -5,6 +5,7 @@ import { ConnectionNotice } from '@/components/connection-notice';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { installDemoApi } from '@/demo-api';
 import { installDemoCredentialApi } from '@/demo-credentials';
+import { installDemoCrewKitApi } from '@/demo-crew-kit';
 
 import './index.css';
 import './bp-theme.css';
@@ -12,6 +13,7 @@ import './accessibility.css';
 
 installDemoApi();
 installDemoCredentialApi();
+installDemoCrewKitApi();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
