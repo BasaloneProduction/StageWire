@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import express, { Router, type IRouter } from "express";
 import { db, workerFileMetadata, workerProfiles } from "@workspace/db";
 import {
@@ -96,6 +96,7 @@ async function ownedFileRecord(ownerKey: string, fileId: number) {
     .select({
       id: workerFileMetadata.id,
       ownerKey: workerFileMetadata.ownerKey,
+      kind: workerFileMetadata.kind,
       name: workerFileMetadata.name,
       sizeBytes: workerFileMetadata.sizeBytes,
       mimeType: workerFileMetadata.mimeType,
@@ -198,6 +199,9 @@ router.put(
       if (!SAFE_UPLOAD_MIME_TYPES.has(mimeType)) {
         return res.status(415).json({ error: "StageWire currently stores PDF, Word, JPEG, PNG, and WebP files." });
       }
+      if (existing.kind === "profile-photo" && !mimeType.startsWith("image/")) {
+        return res.status(415).json({ error: "Profile photos must be JPEG, PNG, or WebP images." });
+      }
 
       const storage = privateObjectStorage();
       const nextStorageKey = newStorageKey(ownerKey, fileId);
@@ -222,6 +226,30 @@ router.put(
 
       if (existing.storageStatus === "stored" && existing.storageKey && existing.storageKey !== nextStorageKey) {
         await storage.delete(existing.storageKey).catch(() => undefined);
+      }
+
+      if (existing.kind === "profile-photo") {
+        const stalePhotos = await db
+          .select({ id: workerFileMetadata.id, storageKey: workerFileMetadata.storageKey, storageStatus: workerFileMetadata.storageStatus })
+          .from(workerFileMetadata)
+          .where(and(
+            eq(workerFileMetadata.ownerKey, ownerKey),
+            eq(workerFileMetadata.kind, "profile-photo"),
+            ne(workerFileMetadata.id, fileId),
+          ));
+        for (const stale of stalePhotos) {
+          if (stale.storageStatus === "stored" && stale.storageKey) {
+            try {
+              await storage.delete(stale.storageKey);
+            } catch {
+              continue;
+            }
+          }
+          await db.delete(workerFileMetadata).where(and(
+            eq(workerFileMetadata.id, stale.id),
+            eq(workerFileMetadata.ownerKey, ownerKey),
+          ));
+        }
       }
       return res.json(updated);
     } catch (error) {
