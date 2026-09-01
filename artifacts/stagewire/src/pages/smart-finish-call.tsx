@@ -67,14 +67,17 @@ export default function SmartFinishCallPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [previewStart, setPreviewStart] = useState(() => draft.actualStart || '');
   const [previewEnd, setPreviewEnd] = useState(() => draft.actualEnd || localDateTime());
+  const [endEdited, setEndEdited] = useState(() => Boolean(draft.actualEnd));
   const [previewBreak, setPreviewBreak] = useState(() => Number(draft.breakMinutes || 0));
   const [previewInitialized, setPreviewInitialized] = useState(false);
 
   const data = workday.data;
   const call = data?.call;
   const initialStart = draft.actualStart || toLocalInput(call?.actualStart);
-  const expenseTotal = useMemo(() => data?.expenses.reduce((sum, item) => sum + item.amount, 0) ?? 0, [data]);
+  const itemizedExpenseTotal = useMemo(() => data?.expenses.reduce((sum, item) => sum + item.amount, 0) ?? 0, [data]);
+  const expenseTotal = Math.max(itemizedExpenseTotal, call?.expenseAmount ?? 0);
   const notes = data?.notes ?? [];
+  const recentNotes = useMemo(() => [...(data?.notes ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5), [data]);
   const checklistDone = data?.checklist.items.filter((item) => item.checked).length ?? 0;
   const checklistTotal = data?.checklist.items.length ?? 0;
   const shiftHours = hoursBetween(previewStart, previewEnd, previewBreak);
@@ -99,7 +102,11 @@ export default function SmartFinishCallPage() {
   }
 
   const saveDraft = (event: FormEvent<HTMLFormElement>) => {
-    try { sessionStorage.setItem(`stagewire-finish-${callId}`, JSON.stringify(formDraft(event.currentTarget))); } catch {}
+    try {
+      const next = formDraft(event.currentTarget);
+      if (!endEdited && next.actualEnd === previewEnd) delete next.actualEnd;
+      sessionStorage.setItem(`stagewire-finish-${callId}`, JSON.stringify(next));
+    } catch {}
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -108,7 +115,7 @@ export default function SmartFinishCallPage() {
 
     const form = new FormData(event.currentTarget);
     const actualStartRaw = String(form.get('actualStart') || '');
-    const actualEndRaw = String(form.get('actualEnd') || '');
+    const actualEndRaw = endEdited ? String(form.get('actualEnd') || '') : localDateTime();
     const breakMinutes = Number(form.get('breakMinutes') || 0);
     const computedHours = hoursBetween(actualStartRaw, actualEndRaw, breakMinutes);
 
@@ -120,8 +127,13 @@ export default function SmartFinishCallPage() {
       setValidationError('Actual end must be after paid start. Check the time and try again.');
       return;
     }
-    if (breakMinutes < 0) {
-      setValidationError('Break minutes cannot be negative.');
+    if (!Number.isFinite(breakMinutes) || breakMinutes < 0) {
+      setValidationError('Break minutes must be zero or a positive number.');
+      return;
+    }
+    const elapsedMinutes = (new Date(actualEndRaw).getTime() - new Date(actualStartRaw).getTime()) / 60_000;
+    if (breakMinutes >= elapsedMinutes) {
+      setValidationError('Break time must be shorter than the total call time.');
       return;
     }
     if (computedHours > 24) {
@@ -201,7 +213,8 @@ export default function SmartFinishCallPage() {
           </div>
           <div className="field">
             <label htmlFor="actualEnd">Actual end</label>
-            <input id="actualEnd" name="actualEnd" type="datetime-local" required defaultValue={draft.actualEnd || previewEnd} onChange={(e) => setPreviewEnd(e.target.value)} />
+            <input id="actualEnd" name="actualEnd" type="datetime-local" required defaultValue={draft.actualEnd || previewEnd} onChange={(e) => { setPreviewEnd(e.target.value); setEndEdited(true); }} />
+            <span className="help-text">{endEdited ? 'Using your saved or edited end time.' : 'If you leave this alone, Finish uses the current time when you tap the button.'}</span>
           </div>
           <div className="field">
             <label htmlFor="breakMinutes">Break minutes</label>
@@ -259,10 +272,10 @@ export default function SmartFinishCallPage() {
           <div className="warning-box" role="status"><AlertCircle size={20} /><div><strong>Checklist isn’t complete.</strong><p>You can still finish the call. StageWire will preserve exactly what was checked and what wasn’t.</p></div></div>
         )}
 
-        {notes.length > 0 && (
+        {recentNotes.length > 0 && (
           <div className="card" style={{ marginTop: 22, padding: 18 }}>
             <div className="eyebrow">Already saved today</div>
-            <div className="vault-items" style={{ marginTop: 12 }}>{notes.slice(-5).reverse().map((note) => <div className="vault-item" key={note.id}><span>{note.text}</span><span>saved</span></div>)}</div>
+            <div className="vault-items" style={{ marginTop: 12 }}>{recentNotes.map((note) => <div className="vault-item" key={note.id}><span>{note.text}</span><span>saved</span></div>)}</div>
           </div>
         )}
 
