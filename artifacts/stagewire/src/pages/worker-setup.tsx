@@ -1,6 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BadgeCheck, BookOpenCheck, Camera, CheckCircle2, FileText, LockKeyhole, Save, ShieldCheck, Upload, UserRound } from 'lucide-react';
+import { BookOpenCheck, Camera, CheckCircle2, LockKeyhole, Save, ShieldCheck, UserRound } from 'lucide-react';
 import { Link } from 'wouter';
 import {
   getGetPassportQueryKey,
@@ -9,6 +9,7 @@ import {
   useUpdateProfile,
   type ProfileInput,
 } from '@workspace/api-client-react';
+import WorkerFileMetadataPanel from '@/components/worker-file-metadata';
 import { AccountSecurityPanel } from '@/pages/account-security';
 
 type ShareSettings = {
@@ -18,10 +19,7 @@ type ShareSettings = {
   shareCertifications: boolean;
 };
 
-type LocalFile = { name: string; size: number; type: string };
-
 const LEGACY_SHARE_KEY = 'stagewire-share-settings-v14';
-const FILES_KEY = 'stagewire-profile-files-v14';
 const PHOTO_KEY = 'stagewire-profile-photo-preview-v14';
 
 function readLegacyShareSettings(): ShareSettings | null {
@@ -32,31 +30,12 @@ function readLegacyShareSettings(): ShareSettings | null {
   return null;
 }
 
-function readFiles(): { certifications: LocalFile[]; documents: LocalFile[] } {
-  try {
-    const raw = localStorage.getItem(FILES_KEY);
-    if (raw) return { certifications: [], documents: [], ...JSON.parse(raw) };
-  } catch {}
-  return { certifications: [], documents: [] };
-}
-
-function fileMeta(files: FileList | null): LocalFile[] {
-  return Array.from(files || []).map((file) => ({ name: file.name, size: file.size, type: file.type || 'file' }));
-}
-
-function prettySize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 export default function WorkerSetupPage() {
   const profile = useGetProfile();
   const updateProfile = useUpdateProfile();
   const client = useQueryClient();
   const [saved, setSaved] = useState(false);
   const [shareDraft, setShareDraft] = useState<ShareSettings | null>(readLegacyShareSettings);
-  const [files, setFiles] = useState(readFiles);
   const [photoName, setPhotoName] = useState('');
   const [photoPreview, setPhotoPreview] = useState(() => localStorage.getItem(PHOTO_KEY) || '');
 
@@ -93,18 +72,6 @@ export default function WorkerSetupPage() {
       try { localStorage.setItem(PHOTO_KEY, result); } catch {}
     };
     reader.readAsDataURL(file);
-  };
-
-  const pickFiles = (kind: 'certifications' | 'documents', selected: FileList | null) => {
-    const next = { ...files, [kind]: [...files[kind], ...fileMeta(selected)] };
-    setFiles(next);
-    localStorage.setItem(FILES_KEY, JSON.stringify(next));
-  };
-
-  const removeFile = (kind: 'certifications' | 'documents', index: number) => {
-    const next = { ...files, [kind]: files[kind].filter((_, i) => i !== index) };
-    setFiles(next);
-    localStorage.setItem(FILES_KEY, JSON.stringify(next));
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -191,15 +158,14 @@ export default function WorkerSetupPage() {
         </section>
 
         <section className="card card-pad setup-section">
-          <div className="setup-section-head"><span className="setup-step">4</span><div><div className="eyebrow">File preview</div><h2>Choose what you want StageWire to remember.</h2><p className="subtitle">This build remembers certification/document filenames and file details only. It does not yet store or upload those file contents. Secure file storage must be wired before production launch.</p></div></div>
-          <div className="privacy-rule" style={{ marginBottom: 18 }}><ShieldCheck size={20} /><strong>Do not rely on this preview as your only copy of a certification or document.</strong></div>
+          <div className="setup-section-head"><span className="setup-step">4</span><div><div className="eyebrow">File records</div><h2>Remember the file list across devices.</h2><p className="subtitle">Certification/document filename records now follow your worker account. The underlying file contents are still not uploaded; secure object storage remains a production requirement.</p></div></div>
+          <div className="privacy-rule" style={{ marginBottom: 18 }}><ShieldCheck size={20} /><strong>Keep the actual certification or document somewhere safe until StageWire secure storage is wired.</strong></div>
           <div className="upload-grid">
             <div className="upload-card">
               <div className="upload-preview">{photoPreview ? <img src={photoPreview} alt="Profile preview" /> : <UserRound size={44} />}</div>
-              <div><h3>Profile photo</h3><p className="help-text">Optional. Photo preview data is kept locally in this browser for the current build. You decide whether it appears on a shared Passport.</p><label className="btn btn-secondary file-button"><Camera size={18} /> Choose photo<input type="file" accept="image/*" onChange={pickPhoto} /></label>{(photoName || worker.profilePhotoName) && <div className="file-name">{photoName || worker.profilePhotoName}</div>}</div>
+              <div><h3>Profile photo</h3><p className="help-text">Optional. The photo preview itself still stays local to this browser. StageWire will not claim it followed your account until secure image storage exists.</p><label className="btn btn-secondary file-button"><Camera size={18} /> Choose photo<input type="file" accept="image/*" onChange={pickPhoto} /></label>{(photoName || worker.profilePhotoName) && <div className="file-name">{photoName || worker.profilePhotoName}</div>}</div>
             </div>
-            <UploadBucket title="Certification file list" icon={<BadgeCheck size={24} />} accept="image/*,.pdf" files={files.certifications} onPick={(list) => pickFiles('certifications', list)} onRemove={(index) => removeFile('certifications', index)} />
-            <UploadBucket title="Document file list" icon={<FileText size={24} />} accept="image/*,.pdf,.doc,.docx" files={files.documents} onPick={(list) => pickFiles('documents', list)} onRemove={(index) => removeFile('documents', index)} />
+            <WorkerFileMetadataPanel />
           </div>
         </section>
 
@@ -211,7 +177,7 @@ export default function WorkerSetupPage() {
             <PrivacyToggle label="Skills" detail="Professional capabilities" checked={share.shareSkills} onChange={(value) => saveShare({ ...share, shareSkills: value })} />
             <PrivacyToggle label="Certifications" detail="Credential names, not private files" checked={share.shareCertifications} onChange={(value) => saveShare({ ...share, shareCertifications: value })} />
           </div>
-          <div className="privacy-rule"><ShieldCheck size={20} /><strong>Phone, email, emergency contact, and uploaded files remain private.</strong></div>
+          <div className="privacy-rule"><ShieldCheck size={20} /><strong>Phone, email, emergency contact, and file contents remain private.</strong></div>
         </section>
 
         {updateProfile.error && <div className="error-box" role="alert"><strong>{(updateProfile.error as Error).message || 'Profile could not be saved.'}</strong></div>}
@@ -230,8 +196,4 @@ export default function WorkerSetupPage() {
 
 function PrivacyToggle({ label, detail, checked, onChange }: { label: string; detail: string; checked: boolean; onChange: (value: boolean) => void }) {
   return <label className="privacy-row"><span><strong>{label}</strong><small>{detail}</small></span><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} /></label>;
-}
-
-function UploadBucket({ title, icon, accept, files, onPick, onRemove }: { title: string; icon: React.ReactNode; accept: string; files: LocalFile[]; onPick: (files: FileList | null) => void; onRemove: (index: number) => void }) {
-  return <div className="upload-card"><div className="upload-icon">{icon}</div><div><h3>{title}</h3><p className="help-text">Choose files to remember their names and details in this preview. File contents are not stored yet.</p><label className="btn btn-secondary file-button"><Upload size={18} /> Choose files<input type="file" multiple accept={accept} onChange={(e) => onPick(e.target.files)} /></label>{files.length > 0 && <div className="selected-files">{files.map((file, index) => <div className="selected-file" key={`${file.name}-${index}`}><span><b>{file.name}</b><small>{prettySize(file.size)} · filename only</small></span><button type="button" className="btn btn-quiet" onClick={() => onRemove(index)}>Remove</button></div>)}</div>}</div></div>;
 }
