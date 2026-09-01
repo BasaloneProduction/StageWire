@@ -113,12 +113,24 @@ function blankCall(id: number, input: Record<string, any>): DemoCall {
   };
 }
 
+const defaultChecklistItems = ['Work gloves', 'Crescent wrench', 'Multitool', 'Flashlight / headlamp', 'Hard hat', 'Safety vest', 'Work boots', 'Harness if required', 'Water', 'Phone charger', 'ID / credentials'];
+const roleChecklistSuggestions: Record<string, string[]> = {
+  'Up Rigger': ['Harness fit checked', 'Rigging gloves'],
+  'Down Rigger': ['Rigging gloves', 'Radio / comms'],
+  Pusher: ['Crew contact saved', 'Truck / dock details reviewed'],
+  Lighting: ['Gels / tape', 'Lighting tools'],
+  Audio: ['Hearing protection', 'Audio tools'],
+  Video: ['Media / camera kit', 'Video tools'],
+  Carpentry: ['Eye protection', 'Carpentry tools'],
+  'Forklift/Aerial Lift Operator': ['Lift certification', 'Spotter plan reviewed'],
+  'Truck / Logistics': ['Driver documents', 'Load plan reviewed'],
+};
+
 function defaultChecklist(callId: number, role: string, state: DemoState) {
-  const labels = ['Work gloves', 'Crescent wrench', 'Flashlight / headlamp', 'Hard hat', 'Water', 'ID / credentials'];
-  if (role === 'Pusher') labels.push('Crew contact saved', 'Truck / dock details reviewed');
+  const labels = [...defaultChecklistItems, ...(roleChecklistSuggestions[role] || [])];
   return labels.map((label, index) => ({
     id: state.nextItemId++, callId, label, checked: false,
-    isCustom: false, isSuggested: index >= 6, sortOrder: index,
+    isCustom: false, isSuggested: index >= defaultChecklistItems.length, sortOrder: index,
     createdAt: new Date().toISOString(),
   }));
 }
@@ -202,7 +214,10 @@ export function installDemoApi() {
     if (!call) return json({ error: 'Call not found' }, 404);
 
     if (!tail && method === 'GET') return json(call);
-    if (tail === 'workday' && method === 'GET') return json({ call, checklist: { items: state.checklist[id] || [] }, notes: state.notes[id] || [], expenses: state.expenses[id] || [] });
+    if (tail === 'workday' && method === 'GET') {
+      const newestFirst = (items: any[]) => [...items].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+      return json({ call, checklist: { items: state.checklist[id] || [] }, notes: newestFirst(state.notes[id] || []), expenses: newestFirst(state.expenses[id] || []) });
+    }
     if (tail === 'arrive' && method === 'POST') { Object.assign(call, body(init), { status: 'arrived' }); save(state); return json(call); }
     if (tail === 'start' && method === 'POST') { Object.assign(call, body(init), { status: 'active' }); save(state); return json(call); }
     if (tail === 'notes' && method === 'POST') {
@@ -248,9 +263,11 @@ export function installDemoApi() {
       call.tollExpense = Number((Number(call.tollExpense || 0) + tollExpense).toFixed(2));
       const start = new Date(call.actualStart || data.actualStart).getTime();
       const end = new Date(call.actualEnd || data.actualEnd).getTime();
-      const hours = Math.max(0, (end - start) / 3600000 - Number(call.breakMinutes || 0) / 60);
-      call.hours = Number(hours.toFixed(2));
-      call.gross = Number((call.hours * Number(call.hourlyRate || 0)).toFixed(2));
+      const workedHours = Math.max(0, (end - start) / 3600000 - Number(call.breakMinutes || 0) / 60);
+      const payableHours = Math.max(workedHours, Number(call.minimumHours || 0));
+      const rate = Number(call.hourlyRate || 0);
+      call.hours = Number(workedHours.toFixed(2));
+      call.gross = Number((call.payType === 'hourly' ? payableHours * rate : rate).toFixed(2));
       save(state); return json(call);
     }
 
