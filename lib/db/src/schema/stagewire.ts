@@ -46,11 +46,13 @@ export const workerIdentities = pgTable("worker_identities", {
 export const workerSessions = pgTable("worker_sessions", {
   sessionHash: text("session_hash").primaryKey(),
   ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  identityId: integer("identity_id").notNull().references(() => workerIdentities.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
   revokedAt: timestamp("revoked_at", { mode: "string" }),
 }, (table) => [
   index("worker_sessions_owner_key_idx").on(table.ownerKey),
+  index("worker_sessions_identity_id_idx").on(table.identityId),
   index("worker_sessions_expires_at_idx").on(table.expiresAt),
 ]);
 
