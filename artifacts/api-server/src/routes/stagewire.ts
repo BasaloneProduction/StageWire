@@ -39,6 +39,7 @@ import {
 } from "@workspace/api-zod";
 import { db, callChecklistItems, callExpenses, callNotes, calls, workerProfiles } from "@workspace/db";
 import { PREVIEW_OWNER_KEY, ownedCallWhere, ownedCallsWhere, ownedProfileWhere } from "../domain/worker-owner";
+import { currentWorkerOwnerKey, currentWorkerPrincipal } from "../domain/worker-context";
 
 const router: IRouter = Router();
 
@@ -246,6 +247,7 @@ async function workdayForCall(call: typeof calls.$inferSelect) {
 }
 
 async function ensureSeedData() {
+  if (currentWorkerPrincipal().kind !== "preview") return;
   if (seeded) return;
 
   const existingProfile = await db.select({ id: workerProfiles.id }).from(workerProfiles).where(ownedProfileWhere()).limit(1);
@@ -376,7 +378,7 @@ router.post("/calls", async (req, res) => {
       await db
         .insert(calls)
         .values({
-          ownerKey: PREVIEW_OWNER_KEY,
+          ownerKey: currentWorkerOwnerKey(),
           venue: input.venue.trim(),
           venueAddress: asNullable(input.venueAddress),
           showName: input.showName.trim(),
