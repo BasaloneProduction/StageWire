@@ -14,7 +14,7 @@ import {
 
 export const workerProfiles = pgTable("worker_profiles", {
   id: serial("id").primaryKey(),
-  ownerKey: text("owner_key").notNull().default("preview-worker-v14"),
+  ownerKey: text("owner_key").notNull(),
   displayName: text("display_name").notNull().default("StageWire Worker"),
   homeCityState: text("home_city_state").notNull().default(""),
   phone: text("phone").notNull().default(""),
@@ -45,7 +45,7 @@ export const workerIdentities = pgTable("worker_identities", {
 
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
-  ownerKey: text("owner_key").notNull().default("preview-worker-v14"),
+  ownerKey: text("owner_key").notNull(),
   venue: text("venue").notNull(),
   venueAddress: text("venue_address"),
   showName: text("show_name").notNull(),
