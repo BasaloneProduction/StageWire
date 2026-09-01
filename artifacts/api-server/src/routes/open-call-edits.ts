@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { CreateCallBody } from "@workspace/api-zod";
 import { db, callChecklistItems, callExpenses, callNotes, calls } from "@workspace/db";
+import { canRemoveFutureCall } from "../domain/record-rules";
 
 const router: IRouter = Router();
 
@@ -154,7 +155,7 @@ router.delete("/calls/:id", async (req, res) => {
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "That call ID is not valid." });
   const current = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
   if (!current) return res.status(404).json({ error: "Call not found." });
-  if (current.status !== "upcoming" || current.arrivalAt || current.actualStart) {
+  if (!canRemoveFutureCall(current)) {
     return res.status(409).json({ error: "Only a future call with no arrival or paid-work record can be removed. Active and finished work stays in StageWire." });
   }
 
