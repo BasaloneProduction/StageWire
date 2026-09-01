@@ -28,6 +28,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build shared library types
         run: pnpm run typecheck:libs
+      - name: Test API record integrity
+        run: pnpm --dir artifacts/api-server test
       - name: Typecheck API server
         run: pnpm --dir artifacts/api-server typecheck
       - name: Build API server
