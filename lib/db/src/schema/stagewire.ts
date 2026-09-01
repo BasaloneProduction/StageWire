@@ -78,6 +78,13 @@ export const workerCredentials = pgTable("worker_credentials", {
   check("worker_credentials_status_check", sql`${table.status} in ('current', 'planned')`),
 ]);
 
+export const workerCrewKitState = pgTable("worker_crew_kit_state", {
+  ownerKey: text("owner_key").primaryKey().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  customItemsJson: text("custom_items_json").notNull().default("[]"),
+  readyMarksJson: text("ready_marks_json").notNull().default("[]"),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+});
+
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
   ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "restrict" }),
