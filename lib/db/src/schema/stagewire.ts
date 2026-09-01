@@ -32,6 +32,17 @@ export const workerProfiles = pgTable("worker_profiles", {
   uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),
 ]);
 
+export const workerIdentities = pgTable("worker_identities", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(),
+  subject: text("subject").notNull(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("worker_identities_provider_subject_unique").on(table.provider, table.subject),
+  index("worker_identities_owner_key_idx").on(table.ownerKey),
+]);
+
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
   ownerKey: text("owner_key").notNull().default("preview-worker-v14"),
