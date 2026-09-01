@@ -54,6 +54,10 @@ createRoot(document.getElementById('root')!, {
   },
 }).render(
   <ErrorBoundary>
+    <div className="preview-safety-notice print-hide" role="note" aria-label="Preview safety notice">
+      <strong>Preview build — no worker accounts yet.</strong>
+      <span>Do not enter real personal, financial, or credential data on a shared or public deployment. Authentication and cross-device identity are still being built.</span>
+    </div>
     <App />
   </ErrorBoundary>,
 );
