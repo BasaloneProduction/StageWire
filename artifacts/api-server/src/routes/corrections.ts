@@ -96,6 +96,23 @@ async function finishedCall(id: number) {
   return { call, error: null } as const;
 }
 
+function isLockedWorkdayMutation(method: string, path: string) {
+  if (method === "POST" && /^\/(?:\d+)\/(?:notes|expenses|checklist\/items|checklist\/reset)$/.test(path)) return true;
+  if ((method === "PATCH" || method === "DELETE") && /^\/(?:\d+)\/checklist\/items\/\d+$/.test(path)) return true;
+  return false;
+}
+
+router.use("/calls/:id", async (req, res, next) => {
+  if (!isLockedWorkdayMutation(req.method.toUpperCase(), req.path)) return next();
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return next();
+  const call = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  if (call?.status === "finished") {
+    return res.status(409).json({ error: "This Call Receipt is locked. Use Correct record so the change is added to the private audit trail." });
+  }
+  return next();
+});
+
 router.patch("/calls/:id/correct", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "That call ID is not valid." });
