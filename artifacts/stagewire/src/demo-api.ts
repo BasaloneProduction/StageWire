@@ -130,6 +130,9 @@ const correctionLabels: Record<string,string> = {
   showName:'show or event',venue:'venue',venueAddress:'venue address',workDate:'work date',scheduledStart:'scheduled start',estimatedEnd:'estimated end',role:'role',department:'department',employer:'employer / labor provider',crewContactName:'crew contact',crewContactPhone:'crew contact phone',parkingInstructions:'parking instructions',crewEntrance:'crew entrance',loadingDockInfo:'dock / load-in info',dressRequirements:'dress requirements',ppeRequirements:'PPE requirements',toolRequirements:'tool requirements',generalNotes:'dispatch notes',payType:'pay type',minimumHours:'minimum hours',hourlyRate:'rate / flat amount',arrivalAt:'arrival',actualStart:'paid start',actualEnd:'actual end',breakMinutes:'break minutes',mileage:'mileage',note:'final closeout note'
 };
 
+function isParking(category: unknown) { return String(category || '').trim().toLowerCase() === 'parking'; }
+function isToll(category: unknown) { const value = String(category || '').trim().toLowerCase(); return value === 'toll' || value === 'tolls'; }
+
 function defaultChecklist(callId: number, role: string, state: DemoState) {
   const labels = [...defaultChecklistItems, ...(roleChecklistSuggestions[role] || [])];
   return labels.map((label, index) => ({
@@ -222,6 +225,52 @@ export function installDemoApi() {
       const newestFirst = (items: any[]) => [...items].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       return json({ call, checklist: { items: state.checklist[id] || [] }, notes: newestFirst(state.notes[id] || []), expenses: newestFirst(state.expenses[id] || []) });
     }
+
+    const expenseCorrectionMatch = tail.match(/^expenses\/(\d+)\/correct$/);
+    if (expenseCorrectionMatch && (method === 'PATCH' || method === 'DELETE')) {
+      if (call.status !== 'finished') return json({ error: 'Only a finished Call Receipt can be corrected here. Open the active call instead.' }, 409);
+      const expenseId = Number(expenseCorrectionMatch[1]);
+      const list = state.expenses[id] ||= [];
+      const index = list.findIndex((expense) => expense.id === expenseId);
+      if (index < 0) return json({ error: 'Expense not found on this Call Receipt.' }, 404);
+      const current = list[index];
+
+      if (method === 'DELETE') {
+        list.splice(index, 1);
+        call.expenseAmount = Number(Math.max(0, Number(call.expenseAmount || 0) - Number(current.amount || 0)).toFixed(2));
+        if (isParking(current.category)) call.parkingExpense = Number(Math.max(0, Number(call.parkingExpense || 0) - Number(current.amount || 0)).toFixed(2));
+        if (isToll(current.category)) call.tollExpense = Number(Math.max(0, Number(call.tollExpense || 0) - Number(current.amount || 0)).toFixed(2));
+        (state.notes[id] ||= []).push({ id: state.nextNoteId++, callId: id, text: `Worker removed ${current.category} expense #${expenseId} (${Number(current.amount || 0).toFixed(2)}) from the Call Receipt.`, category: 'correction', createdAt: new Date().toISOString() });
+        save(state);
+        return json({ id: expenseId, removed: true });
+      }
+
+      const data = body(init);
+      const nextAmount = Number(data.amount ?? current.amount);
+      const nextCategory = String(data.category ?? current.category).trim();
+      const nextDescription = data.description === undefined ? current.description : data.description;
+      const nextReceiptName = data.receiptAttachmentName === undefined ? current.receiptAttachmentName : data.receiptAttachmentName;
+      if (!Number.isFinite(nextAmount) || nextAmount <= 0) return json({ error: 'Expense amount must be greater than zero.' }, 400);
+      if (!nextCategory) return json({ error: 'Expense category cannot be blank.' }, 400);
+      const changed: string[] = [];
+      if (nextAmount !== Number(current.amount)) changed.push('amount');
+      if (nextCategory !== current.category) changed.push('category');
+      if (String(nextDescription ?? '') !== String(current.description ?? '')) changed.push('description');
+      if (String(nextReceiptName ?? '') !== String(current.receiptAttachmentName ?? '')) changed.push('receipt attachment');
+      if (changed.length === 0) return json({ id: expenseId, corrected: false, changed: [] });
+
+      const amountDelta = nextAmount - Number(current.amount || 0);
+      const parkingDelta = (isParking(nextCategory) ? nextAmount : 0) - (isParking(current.category) ? Number(current.amount || 0) : 0);
+      const tollDelta = (isToll(nextCategory) ? nextAmount : 0) - (isToll(current.category) ? Number(current.amount || 0) : 0);
+      Object.assign(current, { amount: nextAmount, category: nextCategory, description: nextDescription, receiptAttachmentName: nextReceiptName });
+      call.expenseAmount = Number(Math.max(0, Number(call.expenseAmount || 0) + amountDelta).toFixed(2));
+      call.parkingExpense = Number(Math.max(0, Number(call.parkingExpense || 0) + parkingDelta).toFixed(2));
+      call.tollExpense = Number(Math.max(0, Number(call.tollExpense || 0) + tollDelta).toFixed(2));
+      (state.notes[id] ||= []).push({ id: state.nextNoteId++, callId: id, text: `Worker corrected ${nextCategory} expense #${expenseId}: ${changed.join(', ')}.`, category: 'correction', createdAt: new Date().toISOString() });
+      save(state);
+      return json({ id: expenseId, corrected: true, changed });
+    }
+
     if (tail === 'correct' && method === 'PATCH') {
       if (call.status !== 'finished') return json({ error: 'Only a finished Call Receipt can be corrected here. Open the active call instead.' }, 409);
       const data = body(init);
@@ -247,6 +296,13 @@ export function installDemoApi() {
       save(state);
       return json({ id, corrected: changed.length > 0, changed: changed.map((key) => correctionLabels[key] || key) });
     }
+
+    const lockedMutation = call.status === 'finished' && (
+      (method === 'POST' && (tail === 'notes' || tail === 'expenses' || tail === 'checklist/items' || tail === 'checklist/reset')) ||
+      ((method === 'PATCH' || method === 'DELETE') && /^checklist\/items\/\d+$/.test(tail))
+    );
+    if (lockedMutation) return json({ error: 'This Call Receipt is locked. Use Correct record so the change is added to the private audit trail.' }, 409);
+
     if (tail === 'arrive' && method === 'POST') { Object.assign(call, body(init), { status: 'arrived' }); save(state); return json(call); }
     if (tail === 'start' && method === 'POST') { Object.assign(call, body(init), { status: 'active' }); save(state); return json(call); }
     if (tail === 'notes' && method === 'POST') {
