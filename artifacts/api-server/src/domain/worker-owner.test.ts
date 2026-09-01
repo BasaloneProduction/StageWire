@@ -17,7 +17,7 @@ const openCallRoutes = fs.readFileSync(new URL("../routes/open-call-edits.ts", i
 
 test("worker-backed tables keep explicit owner boundaries", () => {
   const ownerColumns = schema.match(/ownerKey:\s*text\("owner_key"\)/g) ?? [];
-  assert.equal(ownerColumns.length, 6, "profiles, identities, sessions, credentials, Crew Kit state, and calls must keep owner keys");
+  assert.equal(ownerColumns.length, 7, "profiles, identities, sessions, credentials, Crew Kit state, file metadata, and calls must keep owner keys");
   assert.doesNotMatch(
     schema,
     /ownerKey:\s*text\("owner_key"\)\.notNull\(\)\.default\("preview-worker-v14"\)/,
@@ -29,6 +29,9 @@ test("worker-backed tables keep explicit owner boundaries", () => {
   assert.match(schema, /worker_credentials_owner_key_idx/, "credential lookups must stay worker-scoped and indexed");
   assert.match(schema, /worker_credentials_status_check/, "credential persisted status must stay limited to current or planned");
   assert.match(schema, /workerCrewKitState = pgTable\("worker_crew_kit_state"/, "Crew Kit state must remain worker-owned");
+  assert.match(schema, /workerFileMetadata = pgTable\("worker_file_metadata"/, "file metadata must remain worker-owned");
+  assert.match(schema, /worker_file_metadata_owner_key_idx/, "file metadata lookups must stay worker-scoped and indexed");
+  assert.match(schema, /worker_file_metadata_storage_status_check/, "file metadata must distinguish metadata-only records from stored objects");
   assert.match(schema, /references\(\(\) => workerProfiles\.ownerKey/, "worker-owned records must point to a real StageWire worker profile");
   assert.match(schema, /calls_owner_key_idx/, "owner-scoped call lookup must stay indexed");
 });
