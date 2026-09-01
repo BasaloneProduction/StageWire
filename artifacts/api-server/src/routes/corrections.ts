@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { CreateCallBody, FinishCallBody } from "@workspace/api-zod";
-import { db, callNotes, calls } from "@workspace/db";
+import { AddCallExpenseBody, CreateCallBody, FinishCallBody } from "@workspace/api-zod";
+import { db, callExpenses, callNotes, calls } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -35,6 +35,8 @@ const CorrectionBody = CreateCallBody.pick({
   mileage: true,
   note: true,
 }).partial());
+
+const ExpenseCorrectionBody = AddCallExpenseBody.partial();
 
 const labels: Record<string, string> = {
   venue: "venue",
@@ -78,15 +80,29 @@ function comparable(value: unknown) {
   return String(value);
 }
 
+function isParking(category: string | null | undefined) {
+  return category?.trim().toLowerCase() === "parking";
+}
+
+function isToll(category: string | null | undefined) {
+  const normalized = category?.trim().toLowerCase();
+  return normalized === "toll" || normalized === "tolls";
+}
+
+async function finishedCall(id: number) {
+  const call = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  if (!call) return { call: null, error: { status: 404, message: "Call not found." } } as const;
+  if (call.status !== "finished") return { call: null, error: { status: 409, message: "Only a finished Call Receipt can be corrected here. Open the active call instead." } } as const;
+  return { call, error: null } as const;
+}
+
 router.patch("/calls/:id/correct", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "That call ID is not valid." });
 
-  const current = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
-  if (!current) return res.status(404).json({ error: "Call not found." });
-  if (current.status !== "finished") {
-    return res.status(409).json({ error: "Only a finished Call Receipt can be corrected here. Open the active call instead." });
-  }
+  const checked = await finishedCall(id);
+  if (!checked.call) return res.status(checked.error.status).json({ error: checked.error.message });
+  const current = checked.call;
 
   try {
     const input = CorrectionBody.parse(req.body);
@@ -153,6 +169,90 @@ router.patch("/calls/:id/correct", async (req, res) => {
     const message = error && typeof error === "object" && "issues" in error ? "Check the corrected fields and try again." : "This correction could not be saved.";
     return res.status(400).json({ error: message });
   }
+});
+
+router.patch("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
+  const id = Number(req.params.id);
+  const expenseId = Number(req.params.expenseId);
+  if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(expenseId) || expenseId <= 0) {
+    return res.status(400).json({ error: "That expense correction is not valid." });
+  }
+
+  const checked = await finishedCall(id);
+  if (!checked.call) return res.status(checked.error.status).json({ error: checked.error.message });
+  const call = checked.call;
+  const current = (await db.select().from(callExpenses).where(eq(callExpenses.id, expenseId)).limit(1))[0];
+  if (!current || current.callId !== id) return res.status(404).json({ error: "Expense not found on this Call Receipt." });
+
+  try {
+    const input = ExpenseCorrectionBody.parse(req.body);
+    const nextAmount = input.amount ?? current.amount;
+    const nextCategory = input.category?.trim() || current.category;
+    const nextDescription = input.description === undefined ? current.description : clean(input.description);
+    const nextReceiptName = input.receiptAttachmentName === undefined ? current.receiptAttachmentName : clean(input.receiptAttachmentName);
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) return res.status(400).json({ error: "Expense amount must be greater than zero." });
+    if (!nextCategory.trim()) return res.status(400).json({ error: "Expense category cannot be blank." });
+
+    const changed: string[] = [];
+    if (Number(nextAmount) !== Number(current.amount)) changed.push("amount");
+    if (nextCategory !== current.category) changed.push("category");
+    if (comparable(nextDescription) !== comparable(current.description)) changed.push("description");
+    if (comparable(nextReceiptName) !== comparable(current.receiptAttachmentName)) changed.push("receipt attachment");
+    if (changed.length === 0) return res.json({ id: expenseId, corrected: false, changed: [] });
+
+    const amountDelta = nextAmount - current.amount;
+    const parkingDelta = (isParking(nextCategory) ? nextAmount : 0) - (isParking(current.category) ? current.amount : 0);
+    const tollDelta = (isToll(nextCategory) ? nextAmount : 0) - (isToll(current.category) ? current.amount : 0);
+
+    await db.update(callExpenses).set({
+      amount: nextAmount,
+      category: nextCategory,
+      description: nextDescription,
+      receiptAttachmentName: nextReceiptName,
+    }).where(eq(callExpenses.id, expenseId));
+    await db.update(calls).set({
+      expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) + amountDelta).toFixed(2)),
+      parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) + parkingDelta).toFixed(2)),
+      tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) + tollDelta).toFixed(2)),
+    }).where(eq(calls.id, id));
+    await db.insert(callNotes).values({
+      callId: id,
+      category: "correction",
+      text: `Worker corrected ${nextCategory} expense #${expenseId}: ${changed.join(", ")}.`,
+    });
+
+    return res.json({ id: expenseId, corrected: true, changed });
+  } catch {
+    return res.status(400).json({ error: "Check the corrected expense and try again." });
+  }
+});
+
+router.delete("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
+  const id = Number(req.params.id);
+  const expenseId = Number(req.params.expenseId);
+  if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(expenseId) || expenseId <= 0) {
+    return res.status(400).json({ error: "That expense correction is not valid." });
+  }
+
+  const checked = await finishedCall(id);
+  if (!checked.call) return res.status(checked.error.status).json({ error: checked.error.message });
+  const call = checked.call;
+  const current = (await db.select().from(callExpenses).where(eq(callExpenses.id, expenseId)).limit(1))[0];
+  if (!current || current.callId !== id) return res.status(404).json({ error: "Expense not found on this Call Receipt." });
+
+  await db.delete(callExpenses).where(eq(callExpenses.id, expenseId));
+  await db.update(calls).set({
+    expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) - current.amount).toFixed(2)),
+    parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) - (isParking(current.category) ? current.amount : 0)).toFixed(2)),
+    tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) - (isToll(current.category) ? current.amount : 0)).toFixed(2)),
+  }).where(eq(calls.id, id));
+  await db.insert(callNotes).values({
+    callId: id,
+    category: "correction",
+    text: `Worker removed ${current.category} expense #${expenseId} (${current.amount.toFixed(2)}) from the Call Receipt.`,
+  });
+
+  return res.json({ id: expenseId, removed: true });
 });
 
 export default router;
