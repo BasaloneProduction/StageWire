@@ -5,6 +5,9 @@ import test from "node:test";
 const schema = fs.readFileSync(new URL("../../../../lib/db/src/schema/stagewire.ts", import.meta.url), "utf8");
 const ownerHelpers = fs.readFileSync(new URL("./worker-owner.ts", import.meta.url), "utf8");
 const routeIndex = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
+const stagewireRoutes = fs.readFileSync(new URL("../routes/stagewire.ts", import.meta.url), "utf8");
+const correctionRoutes = fs.readFileSync(new URL("../routes/corrections.ts", import.meta.url), "utf8");
+const openCallRoutes = fs.readFileSync(new URL("../routes/open-call-edits.ts", import.meta.url), "utf8");
 
 test("worker-backed tables keep an explicit owner key", () => {
   const ownerColumns = schema.match(/ownerKey:\s*text\("owner_key"\)/g) ?? [];
@@ -26,4 +29,17 @@ test("ownership gate runs before every worker call route", () => {
   const stagewire = routeIndex.indexOf("router.use(stagewireRouter)");
   assert.ok(gate >= 0, "ownership gate must remain mounted");
   assert.ok(gate < corrections && gate < openCalls && gate < stagewire, "ownership gate must run before worker call routers");
+});
+
+test("worker routes do not bypass the owner-scoped call helpers", () => {
+  for (const [name, source] of [
+    ["stagewire", stagewireRoutes],
+    ["corrections", correctionRoutes],
+    ["open-call-edits", openCallRoutes],
+  ]) {
+    assert.doesNotMatch(source, /where\(eq\(calls\.id,\s*id\)\)/, `${name} must not query or mutate a call by id without owner scope`);
+  }
+  assert.doesNotMatch(stagewireRoutes, /from\(calls\)\.orderBy/, "call lists must include an owner predicate before ordering");
+  assert.doesNotMatch(stagewireRoutes, /from\(workerProfiles\)\.orderBy/, "profile reads must include an owner predicate before ordering");
+  assert.match(stagewireRoutes, /ownerKey:\s*PREVIEW_OWNER_KEY/, "new preview calls must be stamped with their owner");
 });
