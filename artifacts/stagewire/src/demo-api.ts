@@ -125,12 +125,14 @@ function defaultChecklist(callId: number, role: string, state: DemoState) {
 
 function dashboard(state: DemoState) {
   const finished = state.calls.filter((c) => c.status === 'finished');
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const finishedThisMonth = finished.filter((c) => String(c.workDate || '').slice(0, 7) === currentMonth);
   const upcoming = state.calls.filter((c) => c.status !== 'finished').sort((a, b) => String(a.workDate).localeCompare(String(b.workDate)));
   return {
     upcomingCount: upcoming.length,
     completedCount: finished.length,
-    hoursThisMonth: finished.reduce((sum, c) => sum + Number(c.hours || 0), 0),
-    grossThisMonth: finished.reduce((sum, c) => sum + Number(c.gross || 0), 0),
+    hoursThisMonth: finishedThisMonth.reduce((sum, c) => sum + Number(c.hours || 0), 0),
+    grossThisMonth: finishedThisMonth.reduce((sum, c) => sum + Number(c.gross || 0), 0),
     upcomingCall: upcoming[0] || null,
   };
 }
@@ -206,8 +208,13 @@ export function installDemoApi() {
       (state.notes[id] ||= []).push(note); save(state); return json(note, 201);
     }
     if (tail === 'expenses' && method === 'POST') {
-      const data = body(init); const expense = { id: state.nextExpenseId++, callId: id, amount: Number(data.amount || 0), category: data.category || 'Other', description: data.description ?? null, receiptAttachmentName: data.receiptAttachmentName ?? null, createdAt: new Date().toISOString() };
-      (state.expenses[id] ||= []).push(expense); save(state); return json(expense, 201);
+      const data = body(init); const amount = Number(data.amount || 0); const category = String(data.category || 'Other');
+      const expense = { id: state.nextExpenseId++, callId: id, amount, category, description: data.description ?? null, receiptAttachmentName: data.receiptAttachmentName ?? null, createdAt: new Date().toISOString() };
+      (state.expenses[id] ||= []).push(expense);
+      call.expenseAmount = Number((Number(call.expenseAmount || 0) + amount).toFixed(2));
+      if (category.toLowerCase() === 'parking') call.parkingExpense = Number((Number(call.parkingExpense || 0) + amount).toFixed(2));
+      if (category.toLowerCase() === 'toll' || category.toLowerCase() === 'tolls') call.tollExpense = Number((Number(call.tollExpense || 0) + amount).toFixed(2));
+      save(state); return json(expense, 201);
     }
     if (tail === 'checklist/items' && method === 'POST') {
       const data = body(init); const item = { id: state.nextItemId++, callId: id, label: data.label, checked: false, isCustom: true, isSuggested: false, sortOrder: (state.checklist[id] || []).length, createdAt: new Date().toISOString() };
@@ -221,13 +228,27 @@ export function installDemoApi() {
     }
     if (tail === 'finish' && method === 'POST') {
       const data = body(init);
+      const additionalAmount = Number(data.additionalExpenseAmount || data.expenseAmount || 0);
+      const parkingExpense = Number(data.parkingExpense || 0);
+      const tollExpense = Number(data.tollExpense || 0);
+      if (additionalAmount > 0) {
+        (state.expenses[id] ||= []).push({ id: state.nextExpenseId++, callId: id, amount: additionalAmount, category: data.additionalExpenseCategory || 'Other', description: data.additionalExpenseDescription ?? data.expenseDescription ?? null, receiptAttachmentName: data.receiptAttachmentName ?? null, createdAt: new Date().toISOString() });
+      }
+      if (parkingExpense > 0) {
+        (state.expenses[id] ||= []).push({ id: state.nextExpenseId++, callId: id, amount: parkingExpense, category: 'Parking', description: 'Added while finishing the call', receiptAttachmentName: null, createdAt: new Date().toISOString() });
+      }
+      if (tollExpense > 0) {
+        (state.expenses[id] ||= []).push({ id: state.nextExpenseId++, callId: id, amount: tollExpense, category: 'Toll', description: 'Added while finishing the call', receiptAttachmentName: null, createdAt: new Date().toISOString() });
+      }
       Object.assign(call, data, { status: 'finished', completedAt: new Date().toISOString() });
+      call.expenseAmount = Number((Number(call.expenseAmount || 0) + additionalAmount + parkingExpense + tollExpense).toFixed(2));
+      call.parkingExpense = Number((Number(call.parkingExpense || 0) + parkingExpense).toFixed(2));
+      call.tollExpense = Number((Number(call.tollExpense || 0) + tollExpense).toFixed(2));
       const start = new Date(call.actualStart || data.actualStart).getTime();
       const end = new Date(call.actualEnd || data.actualEnd).getTime();
       const hours = Math.max(0, (end - start) / 3600000 - Number(call.breakMinutes || 0) / 60);
       call.hours = Number(hours.toFixed(2));
       call.gross = Number((call.hours * Number(call.hourlyRate || 0)).toFixed(2));
-      call.expenseAmount = (state.expenses[id] || []).reduce((sum, e) => sum + Number(e.amount || 0), 0) + Number(data.additionalExpenseAmount || 0);
       save(state); return json(call);
     }
 
