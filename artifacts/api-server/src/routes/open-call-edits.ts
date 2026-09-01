@@ -3,6 +3,7 @@ import { Router, type IRouter } from "express";
 import { CreateCallBody } from "@workspace/api-zod";
 import { db, callChecklistItems, callExpenses, callNotes, calls } from "@workspace/db";
 import { canRemoveFutureCall } from "../domain/record-rules";
+import { ownedCallWhere } from "../domain/worker-owner";
 
 const router: IRouter = Router();
 
@@ -82,7 +83,7 @@ router.patch("/calls/:id/details", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "That call ID is not valid." });
 
-  const current = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  const current = (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
   if (!current) return res.status(404).json({ error: "Call not found." });
   if (current.status === "finished") {
     return res.status(409).json({ error: "This Call Receipt is locked. Use Correct record for audited changes." });
@@ -125,8 +126,8 @@ router.patch("/calls/:id/details", async (req, res) => {
 
     const roleChanged = Boolean(patch.role && patch.role !== current.role);
     await db.transaction(async (tx) => {
-      const updated = (await tx.update(calls).set(patch).where(eq(calls.id, id)).returning())[0];
-      if (!roleChanged) return;
+      const updated = (await tx.update(calls).set(patch).where(ownedCallWhere(id)).returning())[0];
+      if (!updated || !roleChanged) return;
 
       await tx.delete(callChecklistItems).where(and(eq(callChecklistItems.callId, id), eq(callChecklistItems.isSuggested, true)));
       const remaining = await tx.select().from(callChecklistItems).where(eq(callChecklistItems.callId, id));
@@ -153,7 +154,7 @@ router.patch("/calls/:id/details", async (req, res) => {
 router.delete("/calls/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "That call ID is not valid." });
-  const current = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  const current = (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
   if (!current) return res.status(404).json({ error: "Call not found." });
   if (!canRemoveFutureCall(current)) {
     return res.status(409).json({ error: "Only a future call with no arrival or paid-work record can be removed. Active and finished work stays in StageWire." });
@@ -163,7 +164,7 @@ router.delete("/calls/:id", async (req, res) => {
     await tx.delete(callChecklistItems).where(eq(callChecklistItems.callId, id));
     await tx.delete(callNotes).where(eq(callNotes.callId, id));
     await tx.delete(callExpenses).where(eq(callExpenses.callId, id));
-    await tx.delete(calls).where(eq(calls.id, id));
+    await tx.delete(calls).where(ownedCallWhere(id));
   });
   return res.json({ id, removed: true });
 });
