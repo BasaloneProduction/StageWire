@@ -127,13 +127,15 @@ function dashboard(state: DemoState) {
   const finished = state.calls.filter((c) => c.status === 'finished');
   const currentMonth = new Date().toISOString().slice(0, 7);
   const finishedThisMonth = finished.filter((c) => String(c.workDate || '').slice(0, 7) === currentMonth);
-  const upcoming = state.calls.filter((c) => c.status !== 'finished').sort((a, b) => String(a.workDate).localeCompare(String(b.workDate)));
+  const upcoming = state.calls.filter((c) => c.status === 'upcoming').sort((a, b) => `${a.workDate} ${a.scheduledStart || ''}`.localeCompare(`${b.workDate} ${b.scheduledStart || ''}`));
+  const active = state.calls.filter((c) => c.status === 'arrived' || c.status === 'active').sort((a, b) => String(b.arrivalAt || b.createdAt || '').localeCompare(String(a.arrivalAt || a.createdAt || '')));
   return {
     upcomingCount: upcoming.length,
     completedCount: finished.length,
     hoursThisMonth: finishedThisMonth.reduce((sum, c) => sum + Number(c.hours || 0), 0),
     grossThisMonth: finishedThisMonth.reduce((sum, c) => sum + Number(c.gross || 0), 0),
     upcomingCall: upcoming[0] || null,
+    activeCall: active[0] || null,
   };
 }
 
