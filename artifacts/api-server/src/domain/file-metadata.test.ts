@@ -16,8 +16,13 @@ test("file metadata is worker-owned and mounted behind worker identity", () => {
 });
 
 test("file API never exposes private object storage keys", () => {
-  assert.doesNotMatch(route, /storageKey:\s*workerFileMetadata\.storageKey[\s\S]*fileRecordColumns/, "public file record columns must not expose storage keys");
-  assert.match(route, /storageStatus:\s*workerFileMetadata\.storageStatus/);
+  const columnsStart = route.indexOf("const fileRecordColumns = {");
+  const columnsEnd = route.indexOf("};", columnsStart);
+  assert.ok(columnsStart >= 0 && columnsEnd > columnsStart, "public file record column allowlist must remain explicit");
+  const publicColumns = route.slice(columnsStart, columnsEnd + 2);
+  assert.doesNotMatch(publicColumns, /storageKey/, "public file record columns must not expose storage keys");
+  assert.match(publicColumns, /storageStatus:\s*workerFileMetadata\.storageStatus/);
+  assert.match(route, /storageKey:\s*workerFileMetadata\.storageKey/, "server internals still need the private storage key to read and delete bytes");
   assert.match(schema, /storageKey:\s*text\("storage_key"\)/);
   assert.match(schema, /storageStatus:\s*text\("storage_status"\)/);
 });
