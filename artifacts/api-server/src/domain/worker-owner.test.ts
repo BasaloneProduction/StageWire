@@ -6,6 +6,7 @@ const schema = fs.readFileSync(new URL("../../../../lib/db/src/schema/stagewire.
 const ownerHelpers = fs.readFileSync(new URL("./worker-owner.ts", import.meta.url), "utf8");
 const identityMap = fs.readFileSync(new URL("./worker-identity-map.ts", import.meta.url), "utf8");
 const accountBootstrap = fs.readFileSync(new URL("./worker-account.ts", import.meta.url), "utf8");
+const authenticatedMiddleware = fs.readFileSync(new URL("./authenticated-worker-middleware.ts", import.meta.url), "utf8");
 const workerIdentity = fs.readFileSync(new URL("../routes/worker-identity.ts", import.meta.url), "utf8");
 const routeIndex = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
 const stagewireRoutes = fs.readFileSync(new URL("../routes/stagewire.ts", import.meta.url), "utf8");
@@ -43,11 +44,29 @@ test("new worker accounts bootstrap profile and identity atomically", () => {
   assert.doesNotMatch(accountBootstrap, /ownerKey\s*=\s*cleanSubject/, "external identity subjects must never become owner keys");
 });
 
+test("real auth middleware accepts only a verified external identity", () => {
+  assert.match(authenticatedMiddleware, /resolveVerifiedIdentity\(req\)/);
+  assert.match(authenticatedMiddleware, /authenticatedPrincipalForIdentity/);
+  assert.match(authenticatedMiddleware, /status\(401\)/, "missing verified login must be rejected");
+  assert.match(authenticatedMiddleware, /status\(403\)/, "unlinked verified login must be rejected");
+  assert.match(authenticatedMiddleware, /runWithWorkerPrincipal\(principal, next\)/);
+  assert.doesNotMatch(authenticatedMiddleware, /ownerKey/, "clients must never supply a StageWire owner key to auth middleware");
+});
+
 test("owner predicates resolve identity from request context", () => {
   assert.match(ownerHelpers, /currentWorkerOwnerKey\(\)/);
   assert.doesNotMatch(ownerHelpers, /eq\(calls\.ownerKey, PREVIEW_OWNER_KEY\)/, "database predicates must not be permanently hard-coded to the preview worker");
   assert.match(workerIdentity, /runWithWorkerPrincipal/);
   assert.match(workerIdentity, /kind:\s*"preview"/, "preview middleware must be explicitly non-authenticated until auth replaces it");
+});
+
+test("preview seeding is isolated from normal request-owned writes", () => {
+  assert.match(stagewireRoutes, /if \(currentWorkerPrincipal\(\)\.kind !== "preview"\) return;/, "demo seed data must never run for authenticated workers");
+  assert.match(
+    stagewireRoutes,
+    /ownerKey:\s*currentWorkerOwnerKey\(\),\s*\n\s*venue:\s*input\.venue\.trim\(\)/,
+    "new calls must inherit the current request owner",
+  );
 });
 
 test("worker identity and ownership gates run before every worker route", () => {
@@ -71,5 +90,4 @@ test("worker routes do not bypass the owner-scoped call helpers", () => {
   }
   assert.doesNotMatch(stagewireRoutes, /from\(calls\)\.orderBy/, "call lists must include an owner predicate before ordering");
   assert.doesNotMatch(stagewireRoutes, /from\(workerProfiles\)\.orderBy/, "profile reads must include an owner predicate before ordering");
-  assert.match(stagewireRoutes, /ownerKey:\s*PREVIEW_OWNER_KEY/, "new preview calls must be stamped with their owner until auth supplies the request owner");
 });
