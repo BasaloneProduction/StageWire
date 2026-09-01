@@ -38,6 +38,7 @@ export default function CallCorrectionPage() {
   if (!Number.isFinite(callId) || callId <= 0) return <div className="page-wrap"><div className="error-box"><strong>Invalid call.</strong></div></div>;
   if (workday.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Opening correction…</h2></div></div>;
   if (workday.isError || !call) return <div className="page-wrap"><div className="error-box"><strong>This call could not be opened for correction.</strong><button className="btn btn-quiet" onClick={() => workday.refetch()}>Try again</button></div></div>;
+  if (call.status !== 'finished') return <div className="page-wrap"><div className="error-box"><AlertCircle size={20}/><div><strong>This call is not finished yet.</strong><p>Corrections are for locked Call Receipts. Use the active call while the job is still open.</p><Link href={`/workday/${callId}`} className="btn btn-primary" style={{ marginTop: 14 }}>Open active call</Link></div></div></div>;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -111,12 +112,18 @@ export default function CallCorrectionPage() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'This correction could not be saved.');
-      client.invalidateQueries({ queryKey: getGetCallQueryKey(callId) });
-      client.invalidateQueries({ queryKey: getGetCallWorkdayQueryKey(callId) });
-      client.invalidateQueries({ queryKey: getListCallsQueryKey() });
-      client.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-      client.invalidateQueries({ queryKey: getGetVaultQueryKey() });
-      client.invalidateQueries({ queryKey: getGetPassportQueryKey() });
+      if (!result.corrected) {
+        setError('Nothing changed. The locked Call Receipt was left exactly as it was.');
+        return;
+      }
+      await Promise.all([
+        client.invalidateQueries({ queryKey: getGetCallQueryKey(callId) }),
+        client.invalidateQueries({ queryKey: getGetCallWorkdayQueryKey(callId) }),
+        client.invalidateQueries({ queryKey: getListCallsQueryKey() }),
+        client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+        client.invalidateQueries({ queryKey: getGetVaultQueryKey() }),
+        client.invalidateQueries({ queryKey: getGetPassportQueryKey() }),
+      ]);
       setLocation(`/receipt/${callId}?corrected=1`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'This correction could not be saved.');
@@ -164,7 +171,7 @@ export default function CallCorrectionPage() {
     <div className="warning-box" role="status" style={{ marginTop: 20 }}><AlertCircle size={20}/><div><strong>Expense corrections are not handled on this screen yet.</strong><p>Recorded expense rows and the locked expense total are left untouched so StageWire does not create a money mismatch.</p></div></div>
     {error && <div className="error-box" role="alert" style={{ marginTop: 18 }}><AlertCircle size={20}/> {error}</div>}
     <div className="form-actions" style={{ marginTop: 22 }}><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving correction…' : <><Save size={19}/> Save correction</>}</button><Link href={`/receipt/${callId}`} className="btn btn-quiet">Cancel</Link></div>
-    <div className="privacy-rule"><CheckCircle2 size={18}/> A saved correction returns you to the updated Call Receipt.</div>
+    <div className="privacy-rule"><CheckCircle2 size={18}/> A saved correction refreshes the connected worker records before returning you to the updated Call Receipt.</div>
   </form></div>;
 }
 
