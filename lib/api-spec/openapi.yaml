@@ -617,6 +617,14 @@ components:
           type: ["string", "null"]
         privateByDefault:
           type: boolean
+        sharePhoto:
+          type: boolean
+        shareHomeBase:
+          type: boolean
+        shareSkills:
+          type: boolean
+        shareCertifications:
+          type: boolean
       required:
         - id
         - displayName
@@ -632,6 +640,10 @@ components:
         - emergencyContact
         - profilePhotoName
         - privateByDefault
+        - sharePhoto
+        - shareHomeBase
+        - shareSkills
+        - shareCertifications
     ProfileInput:
       type: object
       properties:
@@ -666,6 +678,14 @@ components:
           type: ["string", "null"]
         profilePhotoName:
           type: ["string", "null"]
+        sharePhoto:
+          type: boolean
+        shareHomeBase:
+          type: boolean
+        shareSkills:
+          type: boolean
+        shareCertifications:
+          type: boolean
       required:
         - displayName
         - primaryRole

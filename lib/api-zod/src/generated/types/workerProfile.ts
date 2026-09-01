@@ -25,4 +25,8 @@ export interface WorkerProfile {
   /** @nullable */
   profilePhotoName: string | null;
   privateByDefault: boolean;
+  sharePhoto: boolean;
+  shareHomeBase: boolean;
+  shareSkills: boolean;
+  shareCertifications: boolean;
 }

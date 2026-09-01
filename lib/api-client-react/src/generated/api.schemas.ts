@@ -85,6 +85,10 @@ export interface WorkerProfile {
   /** @nullable */
   profilePhotoName: string | null;
   privateByDefault: boolean;
+  sharePhoto: boolean;
+  shareHomeBase: boolean;
+  shareSkills: boolean;
+  shareCertifications: boolean;
 }
 
 export interface ProfileInput {
@@ -104,6 +108,10 @@ export interface ProfileInput {
   emergencyContact?: string | null;
   /** @nullable */
   profilePhotoName?: string | null;
+  sharePhoto?: boolean;
+  shareHomeBase?: boolean;
+  shareSkills?: boolean;
+  shareCertifications?: boolean;
 }
 
 export type CallPayType = typeof CallPayType[keyof typeof CallPayType];

@@ -185,7 +185,11 @@ export const GetProfileResponse = zod.object({
   "bio": zod.string().nullable(),
   "emergencyContact": zod.string().nullable(),
   "profilePhotoName": zod.string().nullable(),
-  "privateByDefault": zod.boolean()
+  "privateByDefault": zod.boolean(),
+  "sharePhoto": zod.boolean(),
+  "shareHomeBase": zod.boolean(),
+  "shareSkills": zod.boolean(),
+  "shareCertifications": zod.boolean()
 })
 
 
@@ -208,7 +212,11 @@ export const UpdateProfileBody = zod.object({
   "certifications": zod.array(zod.string()).optional(),
   "bio": zod.string().nullish(),
   "emergencyContact": zod.string().nullish(),
-  "profilePhotoName": zod.string().nullish()
+  "profilePhotoName": zod.string().nullish(),
+  "sharePhoto": zod.boolean().optional(),
+  "shareHomeBase": zod.boolean().optional(),
+  "shareSkills": zod.boolean().optional(),
+  "shareCertifications": zod.boolean().optional()
 })
 
 export const updateProfileResponseYearsExperienceMin = 0;
@@ -229,7 +237,11 @@ export const UpdateProfileResponse = zod.object({
   "bio": zod.string().nullable(),
   "emergencyContact": zod.string().nullable(),
   "profilePhotoName": zod.string().nullable(),
-  "privateByDefault": zod.boolean()
+  "privateByDefault": zod.boolean(),
+  "sharePhoto": zod.boolean(),
+  "shareHomeBase": zod.boolean(),
+  "shareSkills": zod.boolean(),
+  "shareCertifications": zod.boolean()
 })
 
 
