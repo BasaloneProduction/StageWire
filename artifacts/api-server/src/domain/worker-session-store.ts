@@ -1,6 +1,7 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, workerIdentities, workerSessions } from "@workspace/db";
 import type { WorkerPrincipal } from "./worker-context";
+import { currentAuthenticatedWorker } from "./worker-context";
 import { workerIdentityForVerifiedSubject } from "./worker-identity-map";
 import {
   createSessionToken,
@@ -75,4 +76,14 @@ export async function revokeWorkerSession(token: string, now = new Date()) {
     .where(and(eq(workerSessions.sessionHash, hashSessionToken(token)), isNull(workerSessions.revokedAt)))
     .returning({ sessionHash: workerSessions.sessionHash });
   return revoked.length > 0;
+}
+
+export async function revokeAllCurrentWorkerSessions(now = new Date()) {
+  const worker = currentAuthenticatedWorker();
+  const revoked = await db
+    .update(workerSessions)
+    .set({ revokedAt: now.toISOString() })
+    .where(and(eq(workerSessions.ownerKey, worker.ownerKey), isNull(workerSessions.revokedAt)))
+    .returning({ sessionHash: workerSessions.sessionHash });
+  return revoked.length;
 }
