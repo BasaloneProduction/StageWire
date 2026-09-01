@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { AddCallExpenseBody, CreateCallBody, FinishCallBody } from "@workspace/api-zod";
 import { db, callExpenses, callNotes, calls } from "@workspace/db";
 import { applyExpenseCorrection, removeExpenseFromTotals } from "../domain/record-rules";
+import { ownedCallWhere } from "../domain/worker-owner";
 
 const router: IRouter = Router();
 
@@ -82,7 +83,7 @@ function comparable(value: unknown) {
 }
 
 async function finishedCall(id: number) {
-  const call = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  const call = (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
   if (!call) return { call: null, error: { status: 404, message: "Call not found." } } as const;
   if (call.status !== "finished") return { call: null, error: { status: 409, message: "Only a finished Call Receipt can be corrected here. Open the active call instead." } } as const;
   return { call, error: null } as const;
@@ -99,7 +100,7 @@ router.use("/calls/:id", async (req, res, next) => {
   if (!isLockedWorkdayMutation(req.method.toUpperCase(), callPath)) return next();
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return next();
-  const call = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
+  const call = (await db.select().from(calls).where(ownedCallWhere(id)).limit(1))[0];
   if (call?.status === "finished") {
     return res.status(409).json({ error: "This Call Receipt is locked. Use Correct record so the change is added to the private audit trail." });
   }
@@ -168,7 +169,7 @@ router.patch("/calls/:id/correct", async (req, res) => {
     if (changed.length === 0) return res.json({ id, corrected: false, changed: [] });
 
     await db.transaction(async (tx) => {
-      await tx.update(calls).set(patch).where(eq(calls.id, id));
+      await tx.update(calls).set(patch).where(ownedCallWhere(id));
       await tx.insert(callNotes).values({
         callId: id,
         category: "correction",
@@ -229,7 +230,7 @@ router.patch("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
         description: nextDescription,
         receiptAttachmentName: nextReceiptName,
       }).where(eq(callExpenses.id, expenseId));
-      await tx.update(calls).set(nextTotals).where(eq(calls.id, id));
+      await tx.update(calls).set(nextTotals).where(ownedCallWhere(id));
       await tx.insert(callNotes).values({
         callId: id,
         category: "correction",
@@ -266,7 +267,7 @@ router.delete("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
 
   await db.transaction(async (tx) => {
     await tx.delete(callExpenses).where(eq(callExpenses.id, expenseId));
-    await tx.update(calls).set(nextTotals).where(eq(calls.id, id));
+    await tx.update(calls).set(nextTotals).where(ownedCallWhere(id));
     await tx.insert(callNotes).values({
       callId: id,
       category: "correction",
