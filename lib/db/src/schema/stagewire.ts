@@ -58,7 +58,7 @@ export const workerSessions = pgTable("worker_sessions", {
 
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
-  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "restrict" }),
   venue: text("venue").notNull(),
   venueAddress: text("venue_address"),
   showName: text("show_name").notNull(),
