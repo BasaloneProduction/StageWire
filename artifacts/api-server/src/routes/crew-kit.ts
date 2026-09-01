@@ -5,7 +5,7 @@ import {
   UpdateCrewKitStateBody,
   UpdateCrewKitStateResponse,
 } from "@workspace/api-zod";
-import { db, workerCrewKitState, workerProfiles } from "@workspace/db";
+import { calls, db, workerCrewKitState, workerProfiles } from "@workspace/db";
 import { currentWorkerOwnerKey, currentWorkerPrincipal } from "../domain/worker-context";
 import { PREVIEW_OWNER_KEY } from "../domain/worker-owner";
 
@@ -81,6 +81,38 @@ function cleanInput(value: CrewKitStateValue) {
   return { customItems, readyMarks };
 }
 
+async function pruneFinishedCallMarks(ownerKey: string, state: CrewKitStateValue) {
+  if (!state.readyMarks.some((mark) => mark.startsWith("call-"))) return state;
+  const callRows = await db
+    .select({ id: calls.id, status: calls.status })
+    .from(calls)
+    .where(eq(calls.ownerKey, ownerKey));
+  const openCallIds = new Set(callRows.filter((call) => call.status !== "finished").map((call) => call.id));
+  const readyMarks = state.readyMarks.filter((mark) => {
+    if (!mark.startsWith("call-")) return true;
+    const match = /^call-(\d+):/.exec(mark);
+    return Boolean(match && openCallIds.has(Number(match[1])));
+  });
+  return readyMarks.length === state.readyMarks.length ? state : { ...state, readyMarks };
+}
+
+async function saveCrewKitRow(ownerKey: string, state: CrewKitStateValue) {
+  const updatedAt = new Date().toISOString();
+  await db.insert(workerCrewKitState).values({
+    ownerKey,
+    customItemsJson: JSON.stringify(state.customItems),
+    readyMarksJson: JSON.stringify(state.readyMarks),
+    updatedAt,
+  }).onConflictDoUpdate({
+    target: workerCrewKitState.ownerKey,
+    set: {
+      customItemsJson: JSON.stringify(state.customItems),
+      readyMarksJson: JSON.stringify(state.readyMarks),
+      updatedAt,
+    },
+  });
+}
+
 router.get("/crew-kit-state", async (_req, res, next) => {
   try {
     const ownerKey = await ensureCrewKitOwner();
@@ -92,7 +124,10 @@ router.get("/crew-kit-state", async (_req, res, next) => {
       .from(workerCrewKitState)
       .where(eq(workerCrewKitState.ownerKey, ownerKey))
       .limit(1))[0];
-    return res.json(GetCrewKitStateResponse.parse(responseFromRow(row)));
+    const stored = responseFromRow(row);
+    const clean = await pruneFinishedCallMarks(ownerKey, stored);
+    if (row && clean.readyMarks.length !== stored.readyMarks.length) await saveCrewKitRow(ownerKey, clean);
+    return res.json(GetCrewKitStateResponse.parse(clean));
   } catch (error) {
     return next(error);
   }
@@ -102,20 +137,8 @@ router.put("/crew-kit-state", async (req, res, next) => {
   try {
     const ownerKey = await ensureCrewKitOwner();
     const input = UpdateCrewKitStateBody.parse(req.body);
-    const clean = cleanInput(input);
-    await db.insert(workerCrewKitState).values({
-      ownerKey,
-      customItemsJson: JSON.stringify(clean.customItems),
-      readyMarksJson: JSON.stringify(clean.readyMarks),
-      updatedAt: new Date().toISOString(),
-    }).onConflictDoUpdate({
-      target: workerCrewKitState.ownerKey,
-      set: {
-        customItemsJson: JSON.stringify(clean.customItems),
-        readyMarksJson: JSON.stringify(clean.readyMarks),
-        updatedAt: new Date().toISOString(),
-      },
-    });
+    const clean = await pruneFinishedCallMarks(ownerKey, cleanInput(input));
+    await saveCrewKitRow(ownerKey, clean);
     return res.json(UpdateCrewKitStateResponse.parse(clean));
   } catch (error) {
     if (isValidationError(error) || (error instanceof Error && error.message.startsWith("crew-kit-"))) {
