@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, MapPin, ReceiptText, ShieldCheck } from 'lucide-react';
 import { Link, useLocation, useParams } from 'wouter';
@@ -49,14 +49,23 @@ export default function SmartFinishCallPage() {
   const [previewStart, setPreviewStart] = useState('');
   const [previewEnd, setPreviewEnd] = useState(localDateTime());
   const [previewBreak, setPreviewBreak] = useState(0);
+  const [previewInitialized, setPreviewInitialized] = useState(false);
 
   const data = workday.data;
   const call = data?.call;
+  const initialStart = toLocalInput(call?.actualStart);
   const expenseTotal = useMemo(() => data?.expenses.reduce((sum, item) => sum + item.amount, 0) ?? 0, [data]);
   const notes = data?.notes ?? [];
   const checklistDone = data?.checklist.items.filter((item) => item.checked).length ?? 0;
   const checklistTotal = data?.checklist.items.length ?? 0;
   const shiftHours = hoursBetween(previewStart, previewEnd, previewBreak);
+
+  useEffect(() => {
+    if (!call || previewInitialized) return;
+    setPreviewStart(toLocalInput(call.actualStart));
+    setPreviewBreak(call.breakMinutes || 0);
+    setPreviewInitialized(true);
+  }, [call, previewInitialized]);
 
   if (!Number.isFinite(callId) || callId <= 0) {
     return <div className="page-wrap"><div className="error-box"><strong>Invalid call.</strong></div></div>;
@@ -69,9 +78,6 @@ export default function SmartFinishCallPage() {
   if (workday.isError || !data || !call) {
     return <div className="page-wrap"><div className="error-box"><AlertCircle size={20} /><strong>Could not load this call for closeout.</strong><button className="btn btn-quiet" onClick={() => workday.refetch()}>Try again</button></div></div>;
   }
-
-  const initialStart = toLocalInput(call.actualStart);
-  if (!previewStart && initialStart) setPreviewStart(initialStart);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
