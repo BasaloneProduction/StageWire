@@ -7,6 +7,8 @@ const ownerHelpers = fs.readFileSync(new URL("./worker-owner.ts", import.meta.ur
 const identityMap = fs.readFileSync(new URL("./worker-identity-map.ts", import.meta.url), "utf8");
 const accountBootstrap = fs.readFileSync(new URL("./worker-account.ts", import.meta.url), "utf8");
 const authenticatedMiddleware = fs.readFileSync(new URL("./authenticated-worker-middleware.ts", import.meta.url), "utf8");
+const sessionStore = fs.readFileSync(new URL("./worker-session-store.ts", import.meta.url), "utf8");
+const sessionToken = fs.readFileSync(new URL("./worker-session-token.ts", import.meta.url), "utf8");
 const workerIdentity = fs.readFileSync(new URL("../routes/worker-identity.ts", import.meta.url), "utf8");
 const routeIndex = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
 const stagewireRoutes = fs.readFileSync(new URL("../routes/stagewire.ts", import.meta.url), "utf8");
@@ -15,7 +17,7 @@ const openCallRoutes = fs.readFileSync(new URL("../routes/open-call-edits.ts", i
 
 test("worker-backed tables keep explicit owner boundaries", () => {
   const ownerColumns = schema.match(/ownerKey:\s*text\("owner_key"\)/g) ?? [];
-  assert.equal(ownerColumns.length, 3, "workerProfiles, workerIdentities, and calls must keep owner keys");
+  assert.equal(ownerColumns.length, 4, "profiles, identities, sessions, and calls must keep owner keys");
   assert.doesNotMatch(
     schema,
     /ownerKey:\s*text\("owner_key"\)\.notNull\(\)\.default\("preview-worker-v14"\)/,
@@ -23,7 +25,8 @@ test("worker-backed tables keep explicit owner boundaries", () => {
   );
   assert.match(schema, /worker_profiles_owner_key_unique/, "each owner must have one worker profile");
   assert.match(schema, /worker_identities_provider_subject_unique/, "one external identity must map to only one StageWire owner");
-  assert.match(schema, /references\(\(\) => workerProfiles\.ownerKey/, "identity mappings must point to a real StageWire worker profile");
+  assert.match(schema, /worker_sessions_identity_id_idx/, "sessions must stay tied to their verified identity");
+  assert.match(schema, /references\(\(\) => workerProfiles\.ownerKey/, "identity/session ownership must point to a real StageWire worker profile");
   assert.match(schema, /calls_owner_key_idx/, "owner-scoped call lookup must stay indexed");
 });
 
@@ -42,6 +45,20 @@ test("new worker accounts bootstrap profile and identity atomically", () => {
   assert.match(accountBootstrap, /tx\.insert\(workerIdentities\)/);
   assert.match(accountBootstrap, /code\s*===\s*"23505"/, "concurrent signup races must reconcile unique identity mappings");
   assert.doesNotMatch(accountBootstrap, /ownerKey\s*=\s*cleanSubject/, "external identity subjects must never become owner keys");
+});
+
+test("worker sessions store hashes, expire, and remain bound to verified identities", () => {
+  assert.match(sessionToken, /randomBytes\(32\)/, "session tokens need strong randomness");
+  assert.match(sessionToken, /createHash\("sha256"\)/, "only a one-way token hash should be persisted");
+  assert.match(sessionToken, /httpOnly:\s*true/);
+  assert.match(sessionToken, /sameSite:\s*"strict"/);
+  assert.match(sessionToken, /secure:\s*nodeEnv === "production"/);
+  assert.match(sessionStore, /workerIdentityForVerifiedSubject/, "sessions must begin from a verified linked identity");
+  assert.match(sessionStore, /sessionHash:\s*hashSessionToken\(token\)|const sessionHash = hashSessionToken\(token\)/);
+  assert.match(sessionStore, /gt\(workerSessions\.expiresAt/);
+  assert.match(sessionStore, /isNull\(workerSessions\.revokedAt\)/);
+  assert.match(sessionStore, /row\.sessionOwnerKey !== row\.identityOwnerKey/, "session owner and identity owner must agree");
+  assert.doesNotMatch(sessionStore, /sessionHash:\s*token\b/, "raw session tokens must never be stored in the database");
 });
 
 test("real auth middleware accepts only a verified external identity", () => {
