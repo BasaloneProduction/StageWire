@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, CheckCircle2, Save } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Save, Trash2 } from 'lucide-react';
 import { Link, useLocation, useParams } from 'wouter';
 import {
   getGetCallWorkdayQueryKey,
@@ -23,6 +23,7 @@ export default function EditCallPage() {
   const client = useQueryClient();
   const [, setLocation] = useLocation();
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const call = workday.data?.call;
 
@@ -89,6 +90,29 @@ export default function EditCallPage() {
     }
   };
 
+  const removeMistakenCall = async () => {
+    setError(null);
+    if (!window.confirm(`Remove “${call.showName}” from StageWire? Only use this for a mistaken future call. This cannot remove an arrived, active, or finished work record.`)) return;
+    try {
+      setRemoving(true);
+      const response = await fetch(`/api/calls/${callId}`, { method: 'DELETE' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'This call could not be removed.');
+      await Promise.all([
+        client.invalidateQueries({ queryKey: getListCallsQueryKey() }),
+        client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+      ]);
+      client.removeQueries({ queryKey: getGetCallWorkdayQueryKey(callId) });
+      setLocation('/calls?removed=1');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'This call could not be removed.');
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const canRemove = call.status === 'upcoming' && !call.arrivalAt && !call.actualStart;
+
   return <div className="page-wrap"><div className="page-heading"><div><Link href={`/workday/${callId}`} className="link-text"><ArrowLeft size={17}/> Back to call</Link><div className="eyebrow" style={{ marginTop: 22 }}>Open call details / #{callId}</div><h1 style={{ marginTop: 10 }}>Edit the call.</h1><p className="subtitle">Fix dispatch details before the Receipt is locked. Nothing here restarts the paid clock.</p></div><span className={`badge badge-${call.status}`}>{call.status}</span></div>
 
   <form className="card card-pad form-card" onSubmit={submit}>
@@ -116,9 +140,12 @@ export default function EditCallPage() {
       <TextAreaField label="Other dispatch notes" name="generalNotes" defaultValue={call.generalNotes || ''}/>
     </div>
     {error && <div className="error-box" role="alert" style={{ marginTop: 18 }}><AlertCircle size={20}/>{error}</div>}
-    <div className="form-actions" style={{ marginTop: 22 }}><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : <><Save size={19}/> Save call details</>}</button><Link href={`/workday/${callId}`} className="btn btn-quiet">Cancel</Link></div>
+    <div className="form-actions" style={{ marginTop: 22 }}><button className="btn btn-primary" type="submit" disabled={saving || removing}>{saving ? 'Saving…' : <><Save size={19}/> Save call details</>}</button><Link href={`/workday/${callId}`} className="btn btn-quiet">Cancel</Link></div>
     <div className="privacy-rule"><CheckCircle2 size={18}/> If the role changes before paid work starts, StageWire refreshes role-suggested checklist items and keeps your custom items.</div>
-  </form></div>;
+  </form>
+
+  {canRemove && <section className="card card-pad" style={{ marginTop: 22 }}><div className="eyebrow">Mistaken future call</div><h2 style={{ marginTop: 7 }}>Remove it before work starts.</h2><p className="subtitle">Use this only if the call was entered by mistake or should not exist in your StageWire record. Once arrival is recorded, removal is disabled so work history cannot disappear.</p><button className="btn btn-quiet" type="button" onClick={removeMistakenCall} disabled={removing || saving} style={{ marginTop: 14 }}><Trash2 size={18}/>{removing ? 'Removing…' : 'Remove mistaken call'}</button></section>}
+  </div>;
 }
 
 function Field({ label, name, defaultValue, type = 'text', required = false, min, step }: { label: string; name: string; defaultValue: string; type?: string; required?: boolean; min?: string; step?: string }) {
