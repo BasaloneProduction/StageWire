@@ -1,28 +1,26 @@
 import { useState } from 'react';
 import { BadgeCheck, BriefcaseBusiness, Check, ClipboardCopy, Clock3, Eye, EyeOff, LockKeyhole, Printer, Settings2, ShieldCheck, Wrench } from 'lucide-react';
 import { Link } from 'wouter';
-import { useGetPassport, useGetProfile } from '@workspace/api-client-react';
+import { useGetPassport, useGetProfile, useListCredentials, type Credential } from '@workspace/api-client-react';
 
 type ShareSettings = { sharePhoto: boolean; shareHomeBase: boolean; shareSkills: boolean; shareCertifications: boolean };
-type LearningCert = { id: number; name: string; issuer: string; expires: string; status: 'current' | 'expiring' | 'expired' | 'planned' };
 type PassportCredential = { name: string; issuer: string; expires: string; state: 'current' | 'expiring' | 'profile' };
 const SHARE_KEY = 'stagewire-share-settings-v14';
 const PHOTO_KEY = 'stagewire-profile-photo-preview-v14';
-const LEARNING_KEY = 'stagewire-learning-certs-v14';
 function settings(): ShareSettings { try { return { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true, ...JSON.parse(localStorage.getItem(SHARE_KEY) || '{}') }; } catch { return { sharePhoto: false, shareHomeBase: false, shareSkills: true, shareCertifications: true }; } }
-function learningCerts(): LearningCert[] { try { const value = JSON.parse(localStorage.getItem(LEARNING_KEY) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } }
+function dateOnly(value: string | null | undefined) { return value ? value.slice(0, 10) : ''; }
 function daysUntil(date: string) { if (!date) return null; const target = new Date(`${date}T12:00:00`).getTime(); const today = new Date(); today.setHours(12,0,0,0); return Math.ceil((target - today.getTime()) / 86400000); }
-function isShareableCredential(cert: LearningCert) { if (cert.status === 'planned') return false; const days = daysUntil(cert.expires); return days === null || days >= 0; }
+function isShareableCredential(cert: Credential) { if (cert.status === 'planned') return false; const days = daysUntil(dateOnly(cert.expires)); return days === null || days >= 0; }
 function expirationLabel(date: string) { if (!date) return ''; const value = new Date(`${date}T12:00:00`); return Number.isNaN(value.getTime()) ? date : new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(value); }
 export default function CareerPassportV14Page() {
-  const passport = useGetPassport(); const profile = useGetProfile(); const data = passport.data; const worker = profile.data; const share = settings(); const photo = localStorage.getItem(PHOTO_KEY) || ''; const [copied, setCopied] = useState(false);
-  if (passport.isLoading || profile.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Building Career Passport…</h2></div></div>;
-  if (passport.isError || !data) return <div className="page-wrap"><div className="error-box"><strong>Career Passport could not be opened.</strong><button className="btn btn-quiet" onClick={() => passport.refetch()}>Try again</button></div></div>;
+  const passport = useGetPassport(); const profile = useGetProfile(); const credentialQuery = useListCredentials(); const data = passport.data; const worker = profile.data; const share = settings(); const photo = localStorage.getItem(PHOTO_KEY) || ''; const [copied, setCopied] = useState(false);
+  if (passport.isLoading || profile.isLoading || credentialQuery.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Building Career Passport…</h2></div></div>;
+  if (passport.isError || credentialQuery.isError || !data) return <div className="page-wrap"><div className="error-box"><strong>Career Passport could not be opened.</strong><button className="btn btn-quiet" onClick={() => { passport.refetch(); credentialQuery.refetch(); }}>Try again</button></div></div>;
   const totalHours = data.experience.reduce((sum, item) => sum + item.hours, 0);
-  const learned = learningCerts().filter(isShareableCredential);
+  const learned = (credentialQuery.data || []).filter(isShareableCredential);
   const learnedByName = new Map(learned.map((cert) => [cert.name.trim().toLowerCase(), cert]));
   const seenCredentialNames = new Set<string>();
-  const credentials: PassportCredential[] = [...data.certifications, ...learned.map((cert) => cert.name)].filter((name) => { const key = name.trim().toLowerCase(); if (!key || seenCredentialNames.has(key)) return false; seenCredentialNames.add(key); return true; }).map((name) => { const match = learnedByName.get(name.trim().toLowerCase()); if (!match) return { name, issuer: '', expires: '', state: 'profile' as const }; const days = daysUntil(match.expires); return { name: match.name, issuer: match.issuer.trim(), expires: match.expires, state: days !== null && days <= 60 ? 'expiring' as const : 'current' as const }; });
+  const credentials: PassportCredential[] = [...data.certifications, ...learned.map((cert) => cert.name)].filter((name) => { const key = name.trim().toLowerCase(); if (!key || seenCredentialNames.has(key)) return false; seenCredentialNames.add(key); return true; }).map((name) => { const match = learnedByName.get(name.trim().toLowerCase()); if (!match) return { name, issuer: '', expires: '', state: 'profile' as const }; const expires = dateOnly(match.expires); const days = daysUntil(expires); return { name: match.name, issuer: match.issuer.trim(), expires, state: days !== null && days <= 60 ? 'expiring' as const : 'current' as const }; });
   const visibleCerts = share.shareCertifications ? credentials : []; const visibleSkills = share.shareSkills ? data.skills : [];
   const approvedSummary = [
     `${data.workerName} — StageWire Career Passport`,
