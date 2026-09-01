@@ -19,8 +19,8 @@ patchFile('lib/db/src/schema/stagewire.ts', [[
 
 patchFile('lib/api-spec/openapi.yaml', [
 [
-`        shareSkills:\n          type: boolean\n        shareCertifications:\n          type: boolean\n      required:\n`,
-`        shareSkills:\n          type: boolean\n        shareCertifications:\n          type: boolean\n        taxReservePercent:\n          type: integer\n          minimum: 0\n          maximum: 100\n      required:\n`,
+`        privateByDefault:\n          type: boolean\n        sharePhoto:\n          type: boolean\n        shareHomeBase:\n          type: boolean\n        shareSkills:\n          type: boolean\n        shareCertifications:\n          type: boolean\n      required:\n        - id\n`,
+`        privateByDefault:\n          type: boolean\n        sharePhoto:\n          type: boolean\n        shareHomeBase:\n          type: boolean\n        shareSkills:\n          type: boolean\n        shareCertifications:\n          type: boolean\n        taxReservePercent:\n          type: integer\n          minimum: 0\n          maximum: 100\n      required:\n        - id\n`,
 'WorkerProfile tax reserve property',
 ],
 [
