@@ -103,7 +103,8 @@ function isLockedWorkdayMutation(method: string, path: string) {
 }
 
 router.use("/calls/:id", async (req, res, next) => {
-  if (!isLockedWorkdayMutation(req.method.toUpperCase(), req.path)) return next();
+  const callPath = `/${req.params.id}${req.path}`;
+  if (!isLockedWorkdayMutation(req.method.toUpperCase(), callPath)) return next();
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return next();
   const call = (await db.select().from(calls).where(eq(calls.id, id)).limit(1))[0];
