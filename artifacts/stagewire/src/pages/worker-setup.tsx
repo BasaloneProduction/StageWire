@@ -178,14 +178,15 @@ export default function WorkerSetupPage() {
         </section>
 
         <section className="card card-pad setup-section">
-          <div className="setup-section-head"><span className="setup-step">4</span><div><div className="eyebrow">Files</div><h2>Pick it. Keep it.</h2><p className="subtitle">For this preview, selected files stay on this device. Production cloud storage will be wired separately before launch.</p></div></div>
+          <div className="setup-section-head"><span className="setup-step">4</span><div><div className="eyebrow">File preview</div><h2>Choose what you want StageWire to remember.</h2><p className="subtitle">This build remembers certification/document filenames and file details only. It does not yet store or upload those file contents. Secure file storage must be wired before production launch.</p></div></div>
+          <div className="privacy-rule" style={{ marginBottom: 18 }}><ShieldCheck size={20} /><strong>Do not rely on this preview as your only copy of a certification or document.</strong></div>
           <div className="upload-grid">
             <div className="upload-card">
               <div className="upload-preview">{photoPreview ? <img src={photoPreview} alt="Profile preview" /> : <UserRound size={44} />}</div>
-              <div><h3>Profile photo</h3><p className="help-text">Optional. You decide later whether it appears on a shared Passport.</p><label className="btn btn-secondary file-button"><Camera size={18} /> Choose photo<input type="file" accept="image/*" onChange={pickPhoto} /></label>{(photoName || worker.profilePhotoName) && <div className="file-name">{photoName || worker.profilePhotoName}</div>}</div>
+              <div><h3>Profile photo</h3><p className="help-text">Optional. Photo preview data is kept locally in this browser for the current build. You decide whether it appears on a shared Passport.</p><label className="btn btn-secondary file-button"><Camera size={18} /> Choose photo<input type="file" accept="image/*" onChange={pickPhoto} /></label>{(photoName || worker.profilePhotoName) && <div className="file-name">{photoName || worker.profilePhotoName}</div>}</div>
             </div>
-            <UploadBucket title="Certification files" icon={<BadgeCheck size={24} />} accept="image/*,.pdf" files={files.certifications} onPick={(list) => pickFiles('certifications', list)} onRemove={(index) => removeFile('certifications', index)} />
-            <UploadBucket title="Documents" icon={<FileText size={24} />} accept="image/*,.pdf,.doc,.docx" files={files.documents} onPick={(list) => pickFiles('documents', list)} onRemove={(index) => removeFile('documents', index)} />
+            <UploadBucket title="Certification file list" icon={<BadgeCheck size={24} />} accept="image/*,.pdf" files={files.certifications} onPick={(list) => pickFiles('certifications', list)} onRemove={(index) => removeFile('certifications', index)} />
+            <UploadBucket title="Document file list" icon={<FileText size={24} />} accept="image/*,.pdf,.doc,.docx" files={files.documents} onPick={(list) => pickFiles('documents', list)} onRemove={(index) => removeFile('documents', index)} />
           </div>
         </section>
 
@@ -217,5 +218,5 @@ function PrivacyToggle({ label, detail, checked, onChange }: { label: string; de
 }
 
 function UploadBucket({ title, icon, accept, files, onPick, onRemove }: { title: string; icon: React.ReactNode; accept: string; files: LocalFile[]; onPick: (files: FileList | null) => void; onRemove: (index: number) => void }) {
-  return <div className="upload-card"><div className="upload-icon">{icon}</div><div><h3>{title}</h3><p className="help-text">Choose files now; organize them later.</p><label className="btn btn-secondary file-button"><Upload size={18} /> Choose files<input type="file" multiple accept={accept} onChange={(e) => onPick(e.target.files)} /></label>{files.length > 0 && <div className="selected-files">{files.map((file, index) => <div className="selected-file" key={`${file.name}-${index}`}><span><b>{file.name}</b><small>{prettySize(file.size)}</small></span><button type="button" className="btn btn-quiet" onClick={() => onRemove(index)}>Remove</button></div>)}</div>}</div></div>;
+  return <div className="upload-card"><div className="upload-icon">{icon}</div><div><h3>{title}</h3><p className="help-text">Choose files to remember their names and details in this preview. File contents are not stored yet.</p><label className="btn btn-secondary file-button"><Upload size={18} /> Choose files<input type="file" multiple accept={accept} onChange={(e) => onPick(e.target.files)} /></label>{files.length > 0 && <div className="selected-files">{files.map((file, index) => <div className="selected-file" key={`${file.name}-${index}`}><span><b>{file.name}</b><small>{prettySize(file.size)} · filename only</small></span><button type="button" className="btn btn-quiet" onClick={() => onRemove(index)}>Remove</button></div>)}</div>}</div></div>;
 }
