@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { stripPrivateResponseFields } from "./domain/private-response";
+import { sameOriginWriteGuard } from "./domain/same-origin-write";
 
 const app: Express = express();
 
@@ -44,6 +45,7 @@ app.use("/api", (_req, res, next) => {
   res.json = ((body: unknown) => originalJson(stripPrivateResponseFields(body))) as Response["json"];
   next();
 });
+app.use("/api", sameOriginWriteGuard());
 app.use("/api", router);
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "StageWire API route not found." });
