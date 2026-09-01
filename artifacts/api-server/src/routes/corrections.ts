@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { AddCallExpenseBody, CreateCallBody, FinishCallBody } from "@workspace/api-zod";
 import { db, callExpenses, callNotes, calls } from "@workspace/db";
+import { applyExpenseCorrection, removeExpenseFromTotals } from "../domain/record-rules";
 
 const router: IRouter = Router();
 
@@ -78,15 +79,6 @@ function comparable(value: unknown) {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
   return String(value);
-}
-
-function isParking(category: string | null | undefined) {
-  return category?.trim().toLowerCase() === "parking";
-}
-
-function isToll(category: string | null | undefined) {
-  const normalized = category?.trim().toLowerCase();
-  return normalized === "toll" || normalized === "tolls";
 }
 
 async function finishedCall(id: number) {
@@ -220,9 +212,15 @@ router.patch("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
     if (comparable(nextReceiptName) !== comparable(current.receiptAttachmentName)) changed.push("receipt attachment");
     if (changed.length === 0) return res.json({ id: expenseId, corrected: false, changed: [] });
 
-    const amountDelta = nextAmount - current.amount;
-    const parkingDelta = (isParking(nextCategory) ? nextAmount : 0) - (isParking(current.category) ? current.amount : 0);
-    const tollDelta = (isToll(nextCategory) ? nextAmount : 0) - (isToll(current.category) ? current.amount : 0);
+    const nextTotals = applyExpenseCorrection(
+      {
+        expenseAmount: call.expenseAmount ?? 0,
+        parkingExpense: call.parkingExpense ?? 0,
+        tollExpense: call.tollExpense ?? 0,
+      },
+      { amount: current.amount, category: current.category },
+      { amount: nextAmount, category: nextCategory },
+    );
 
     await db.transaction(async (tx) => {
       await tx.update(callExpenses).set({
@@ -231,11 +229,7 @@ router.patch("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
         description: nextDescription,
         receiptAttachmentName: nextReceiptName,
       }).where(eq(callExpenses.id, expenseId));
-      await tx.update(calls).set({
-        expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) + amountDelta).toFixed(2)),
-        parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) + parkingDelta).toFixed(2)),
-        tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) + tollDelta).toFixed(2)),
-      }).where(eq(calls.id, id));
+      await tx.update(calls).set(nextTotals).where(eq(calls.id, id));
       await tx.insert(callNotes).values({
         callId: id,
         category: "correction",
@@ -261,14 +255,18 @@ router.delete("/calls/:id/expenses/:expenseId/correct", async (req, res) => {
   const call = checked.call;
   const current = (await db.select().from(callExpenses).where(eq(callExpenses.id, expenseId)).limit(1))[0];
   if (!current || current.callId !== id) return res.status(404).json({ error: "Expense not found on this Call Receipt." });
+  const nextTotals = removeExpenseFromTotals(
+    {
+      expenseAmount: call.expenseAmount ?? 0,
+      parkingExpense: call.parkingExpense ?? 0,
+      tollExpense: call.tollExpense ?? 0,
+    },
+    { amount: current.amount, category: current.category },
+  );
 
   await db.transaction(async (tx) => {
     await tx.delete(callExpenses).where(eq(callExpenses.id, expenseId));
-    await tx.update(calls).set({
-      expenseAmount: Number(Math.max(0, (call.expenseAmount ?? 0) - current.amount).toFixed(2)),
-      parkingExpense: Number(Math.max(0, (call.parkingExpense ?? 0) - (isParking(current.category) ? current.amount : 0)).toFixed(2)),
-      tollExpense: Number(Math.max(0, (call.tollExpense ?? 0) - (isToll(current.category) ? current.amount : 0)).toFixed(2)),
-    }).where(eq(calls.id, id));
+    await tx.update(calls).set(nextTotals).where(eq(calls.id, id));
     await tx.insert(callNotes).values({
       callId: id,
       category: "correction",
