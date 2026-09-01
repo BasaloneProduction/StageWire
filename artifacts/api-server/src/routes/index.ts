@@ -6,7 +6,7 @@ import correctionRouter from "./corrections";
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use(stagewireRouter);
 router.use(correctionRouter);
+router.use(stagewireRouter);
 
 export default router;
