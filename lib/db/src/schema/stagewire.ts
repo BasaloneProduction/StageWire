@@ -2,12 +2,14 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
+  index,
   integer,
   pgTable,
   real,
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const workerProfiles = pgTable("worker_profiles", {
@@ -26,7 +28,9 @@ export const workerProfiles = pgTable("worker_profiles", {
   emergencyContact: text("emergency_contact"),
   profilePhotoName: text("profile_photo_name"),
   privateByDefault: boolean("private_by_default").notNull().default(true),
-});
+}, (table) => [
+  uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),
+]);
 
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
@@ -70,33 +74,42 @@ export const calls = pgTable("calls", {
   mealPenaltyAmount: real("meal_penalty_amount").notNull().default(0),
   completedAt: timestamp("completed_at", { mode: "string" }),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("calls_owner_key_idx").on(table.ownerKey),
+  index("calls_owner_work_date_idx").on(table.ownerKey, table.workDate),
+]);
 
 export const callChecklistItems = pgTable("call_checklist_items", {
   id: serial("id").primaryKey(),
-  callId: integer("call_id").notNull(),
+  callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   checked: boolean("checked").notNull().default(false),
   isCustom: boolean("is_custom").notNull().default(false),
   isSuggested: boolean("is_suggested").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("call_checklist_items_call_id_idx").on(table.callId),
+]);
 
 export const callNotes = pgTable("call_notes", {
   id: serial("id").primaryKey(),
-  callId: integer("call_id").notNull(),
+  callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
   category: text("category"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("call_notes_call_id_idx").on(table.callId),
+]);
 
 export const callExpenses = pgTable("call_expenses", {
   id: serial("id").primaryKey(),
-  callId: integer("call_id").notNull(),
+  callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   amount: real("amount").notNull(),
   category: text("category").notNull().default("Other"),
   description: text("description"),
   receiptAttachmentName: text("receipt_attachment_name"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("call_expenses_call_id_idx").on(table.callId),
+]);
