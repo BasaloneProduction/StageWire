@@ -1,6 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import express, { Router, type IRouter } from "express";
 import { db, workerFileMetadata, workerProfiles } from "@workspace/db";
+import {
+  newStorageKey,
+  ObjectStorageUnavailableError,
+  privateObjectStorage,
+} from "../domain/private-object-storage";
 import { currentWorkerOwnerKey, currentWorkerPrincipal } from "../domain/worker-context";
 import { PREVIEW_OWNER_KEY } from "../domain/worker-owner";
 
@@ -8,6 +13,15 @@ const router: IRouter = Router();
 
 const FILE_KINDS = new Set(["certification", "document", "profile-photo"]);
 const MAX_METADATA_SIZE_BYTES = 1024 * 1024 * 1024;
+const MAX_STORED_SIZE_BYTES = 20 * 1024 * 1024;
+const SAFE_UPLOAD_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 const fileRecordColumns = {
   id: workerFileMetadata.id,
   kind: workerFileMetadata.kind,
@@ -55,17 +69,42 @@ function cleanKind(value: unknown) {
 
 function cleanName(value: unknown) {
   const name = typeof value === "string" ? value.trim() : "";
-  return name && name.length <= 255 ? name : null;
+  return name && name.length <= 255 && !/[\u0000-\u001f\u007f]/.test(name) ? name : null;
 }
 
 function cleanMimeType(value: unknown) {
-  const mimeType = typeof value === "string" ? value.trim() : "";
-  return mimeType.slice(0, 200);
+  const mimeType = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return /[\u0000-\u001f\u007f]/.test(mimeType) ? "" : mimeType.slice(0, 200);
 }
 
 function cleanSize(value: unknown) {
   const sizeBytes = Number(value ?? 0);
   return Number.isInteger(sizeBytes) && sizeBytes >= 0 && sizeBytes <= MAX_METADATA_SIZE_BYTES ? sizeBytes : null;
+}
+
+function fileIdParam(value: string | undefined) {
+  const fileId = Number(value);
+  return Number.isInteger(fileId) && fileId > 0 ? fileId : null;
+}
+
+function storageUnavailable(error: unknown) {
+  return error instanceof ObjectStorageUnavailableError;
+}
+
+async function ownedFileRecord(ownerKey: string, fileId: number) {
+  return (await db
+    .select({
+      id: workerFileMetadata.id,
+      ownerKey: workerFileMetadata.ownerKey,
+      name: workerFileMetadata.name,
+      sizeBytes: workerFileMetadata.sizeBytes,
+      mimeType: workerFileMetadata.mimeType,
+      storageKey: workerFileMetadata.storageKey,
+      storageStatus: workerFileMetadata.storageStatus,
+    })
+    .from(workerFileMetadata)
+    .where(and(eq(workerFileMetadata.id, fileId), eq(workerFileMetadata.ownerKey, ownerKey)))
+    .limit(1))[0];
 }
 
 router.get("/file-metadata", async (req, res, next) => {
@@ -142,20 +181,91 @@ router.post("/file-metadata", async (req, res, next) => {
   }
 });
 
+router.put(
+  "/file-metadata/:fileId/content",
+  express.raw({ type: () => true, limit: MAX_STORED_SIZE_BYTES }),
+  async (req, res, next) => {
+    try {
+      const ownerKey = await ensureFileOwner();
+      const fileId = fileIdParam(req.params.fileId);
+      if (!fileId) return res.status(400).json({ error: "That file record ID is not valid." });
+      const existing = await ownedFileRecord(ownerKey, fileId);
+      if (!existing) return res.status(404).json({ error: "File record not found." });
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: "Choose a file before uploading." });
+      if (req.body.length > MAX_STORED_SIZE_BYTES) return res.status(413).json({ error: "Files must be 20 MB or smaller." });
+
+      const mimeType = cleanMimeType(req.get("content-type"));
+      if (!SAFE_UPLOAD_MIME_TYPES.has(mimeType)) {
+        return res.status(415).json({ error: "StageWire currently stores PDF, Word, JPEG, PNG, and WebP files." });
+      }
+
+      const storage = privateObjectStorage();
+      const nextStorageKey = newStorageKey(ownerKey, fileId);
+      await storage.put(nextStorageKey, req.body);
+      let updated;
+      try {
+        updated = (await db
+          .update(workerFileMetadata)
+          .set({
+            sizeBytes: req.body.length,
+            mimeType,
+            storageKey: nextStorageKey,
+            storageStatus: "stored",
+            updatedAt: new Date().toISOString(),
+          })
+          .where(and(eq(workerFileMetadata.id, fileId), eq(workerFileMetadata.ownerKey, ownerKey)))
+          .returning(fileRecordColumns))[0];
+      } catch (error) {
+        await storage.delete(nextStorageKey).catch(() => undefined);
+        throw error;
+      }
+
+      if (existing.storageStatus === "stored" && existing.storageKey && existing.storageKey !== nextStorageKey) {
+        await storage.delete(existing.storageKey).catch(() => undefined);
+      }
+      return res.json(updated);
+    } catch (error) {
+      if (storageUnavailable(error)) return res.status(503).json({ error: "Secure file storage is not configured on this build yet." });
+      return next(error);
+    }
+  },
+);
+
+router.get("/file-metadata/:fileId/content", async (req, res, next) => {
+  try {
+    const ownerKey = await ensureFileOwner();
+    const fileId = fileIdParam(req.params.fileId);
+    if (!fileId) return res.status(400).json({ error: "That file record ID is not valid." });
+    const existing = await ownedFileRecord(ownerKey, fileId);
+    if (!existing) return res.status(404).json({ error: "File record not found." });
+    if (existing.storageStatus !== "stored" || !existing.storageKey) {
+      return res.status(409).json({ error: "This record has filename details only; file contents have not been stored." });
+    }
+
+    const storage = privateObjectStorage();
+    const data = await storage.get(existing.storageKey);
+    if (!data) return res.status(410).json({ error: "The stored file could not be found. Keep your original copy while this is investigated." });
+    res.setHeader("Content-Type", cleanMimeType(existing.mimeType) || "application/octet-stream");
+    res.setHeader("Content-Length", String(data.length));
+    res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(existing.name)}`);
+    return res.send(data);
+  } catch (error) {
+    if (storageUnavailable(error)) return res.status(503).json({ error: "Secure file storage is not configured on this build yet." });
+    return next(error);
+  }
+});
+
 router.delete("/file-metadata/:fileId", async (req, res, next) => {
   try {
     const ownerKey = await ensureFileOwner();
-    const fileId = Number(req.params.fileId);
-    if (!Number.isInteger(fileId) || fileId <= 0) return res.status(400).json({ error: "That file record ID is not valid." });
+    const fileId = fileIdParam(req.params.fileId);
+    if (!fileId) return res.status(400).json({ error: "That file record ID is not valid." });
 
-    const existing = (await db
-      .select({ id: workerFileMetadata.id, storageStatus: workerFileMetadata.storageStatus })
-      .from(workerFileMetadata)
-      .where(and(eq(workerFileMetadata.id, fileId), eq(workerFileMetadata.ownerKey, ownerKey)))
-      .limit(1))[0];
+    const existing = await ownedFileRecord(ownerKey, fileId);
     if (!existing) return res.status(404).json({ error: "File record not found." });
-    if (existing.storageStatus === "stored") {
-      return res.status(409).json({ error: "Stored file removal is not enabled until secure object deletion is wired." });
+    if (existing.storageStatus === "stored" && existing.storageKey) {
+      const storage = privateObjectStorage();
+      await storage.delete(existing.storageKey);
     }
 
     await db
@@ -163,6 +273,7 @@ router.delete("/file-metadata/:fileId", async (req, res, next) => {
       .where(and(eq(workerFileMetadata.id, fileId), eq(workerFileMetadata.ownerKey, ownerKey)));
     return res.status(204).send();
   } catch (error) {
+    if (storageUnavailable(error)) return res.status(503).json({ error: "Stored file removal is unavailable until secure storage is configured." });
     return next(error);
   }
 });
