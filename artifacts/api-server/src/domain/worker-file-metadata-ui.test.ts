@@ -21,10 +21,15 @@ test("legacy browser file lists are import-only", () => {
   assert.doesNotMatch(panel, /localStorage\.setItem\(LEGACY_FILES_KEY/, "new file metadata must never be written back to localStorage");
 });
 
-test("photo preview stays explicitly local until Worker Setup is migrated to private photo storage", () => {
+test("profile photo uses private storage when available and keeps local preview only as fallback", () => {
   assert.match(setup, /stagewire-profile-photo-preview-v14/);
-  assert.match(setup, /photo preview itself still stays local to this browser/i);
-  assert.match(setup, /secure image storage exists/i);
+  assert.match(setup, /fetch\('\/api\/file-metadata\?kind=profile-photo'/);
+  assert.match(setup, /savePhotoMetadata/);
+  assert.match(setup, /savePhotoBytes/);
+  assert.match(setup, /storageStatus === 'stored'/);
+  assert.match(setup, /Profile photo stored privately/);
+  assert.match(setup, /preview stays on this browser only/i);
+  assert.match(setup, /localStorage\.removeItem\(PHOTO_KEY\)/, "successful stored photos must stop relying on the legacy browser copy");
 });
 
 test("file panel distinguishes metadata-only records from privately stored bytes", () => {
