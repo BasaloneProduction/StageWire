@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import workerIdentityRouter from "./worker-identity";
+import credentialRouter from "./credentials";
 import ownershipGateRouter from "./ownership-gate";
 import stagewireRouter from "./stagewire";
 import correctionRouter from "./corrections";
@@ -10,6 +11,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(workerIdentityRouter);
+router.use(credentialRouter);
 router.use(ownershipGateRouter);
 router.use(correctionRouter);
 router.use(openCallEditRouter);
