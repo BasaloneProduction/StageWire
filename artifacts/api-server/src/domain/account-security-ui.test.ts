@@ -26,19 +26,29 @@ test("account security UI uses only authenticated session endpoints", () => {
 });
 
 test("preview reports account readiness without pretending records are portable", () => {
-  assert.match(readinessRoute, /router\.get\("\/auth\/readiness"/);
-  assert.match(readinessRoute, /signInAvailable:\s*false/);
-  assert.match(readinessRoute, /recordsFollowSignIn:\s*false/);
-  assert.match(readinessRoute, /provider:\s*null/);
-  assert.match(routeIndex, /router\.use\(authReadinessRouter\)/);
+  assert.match(readinessRoute, /createAuthReadinessRouter\(signInAvailable/);
+  assert.match(readinessRoute, /recordsFollowSignIn:\s*signInAvailable/);
+  assert.match(readinessRoute, /provider:\s*signInAvailable \? "supabase" : null/);
+  assert.match(routeIndex, /createAuthReadinessRouter\(Boolean\(authConfig\)\)/);
   assert.ok(
-    routeIndex.indexOf("router.use(authReadinessRouter)") < routeIndex.indexOf("router.use(workerIdentityRouter)"),
-    "readiness must be available before preview worker identity is assigned",
+    routeIndex.indexOf("createAuthReadinessRouter(Boolean(authConfig))") < routeIndex.indexOf("if (authConfig)"),
+    "readiness must be available before worker identity is assigned",
   );
   assert.match(page, /This is not a portable worker account yet/);
   assert.match(page, /Use sample information only/);
   assert.match(page, /Verified sign-in service/);
   assert.match(page, /Not connected/);
+});
+
+test("configured builds expose accessible passwordless email sign-in", () => {
+  assert.match(page, /\/api\/auth\/email\/start/);
+  assert.match(page, /\/api\/auth\/email\/verify/);
+  assert.match(page, /type="email"/);
+  assert.match(page, /autoComplete="one-time-code"/);
+  assert.match(page, /pattern="\[0-9\]\{6\}"/);
+  assert.match(page, /Send sign-in code/);
+  assert.match(page, /Verify and continue/);
+  assert.match(page, /No StageWire password to remember/);
 });
 
 test("preview stays honest and the UI cannot remove the final login", () => {
