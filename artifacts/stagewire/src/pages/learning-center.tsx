@@ -69,6 +69,24 @@ const ROLE_TRAINING: Record<string, TrainingOption[]> = {
   ],
 };
 
+function requestedLearningRole() {
+  const requested = new URLSearchParams(window.location.search).get('role') || '';
+  const exact = Object.keys(ROLE_TRAINING).find((role) => role.toLowerCase() === requested.trim().toLowerCase());
+  if (exact) return exact;
+  const value = requested.toLowerCase();
+  if (value.includes('up rigger')) return 'Up Rigger';
+  if (value.includes('down rigger')) return 'Down Rigger';
+  if (value.includes('rigger')) return 'Up Rigger';
+  if (value.includes('pusher')) return 'Pusher';
+  if (value.includes('forklift') || value.includes('aerial') || value.includes('lift operator')) return 'Forklift / Aerial Lift Operator';
+  if (value.includes('show crew') || value.includes('deck')) return 'Show Crew / Deck';
+  if (value.includes('audio') || value.includes('sound')) return 'Audio';
+  if (value.includes('light') || value === 'lx') return 'Lighting';
+  if (value.includes('video') || value.includes('led')) return 'Video';
+  if (value.includes('carp')) return 'Carpentry';
+  return 'Stagehand';
+}
+
 const LEGACY_KEY = 'stagewire-learning-certs-v14';
 
 function dateOnly(value: string | null | undefined) {
@@ -117,7 +135,7 @@ export default function LearningCenterPage() {
   const [legacy] = useState(readLegacyStored);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
-  const [learningRole, setLearningRole] = useState('Stagehand');
+  const [learningRole, setLearningRole] = useState(requestedLearningRole);
   const [trainingLocation, setTrainingLocation] = useState('');
   const [planMessage, setPlanMessage] = useState('');
 
