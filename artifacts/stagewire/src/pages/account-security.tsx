@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle2, KeyRound, Link2, LogOut, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { CheckCircle2, KeyRound, Link2, LogOut, Mail, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 
 type AuthReadiness = {
   mode: 'preview' | 'production';
@@ -44,6 +44,9 @@ export function AccountSecurityPanel() {
   const [readiness, setReadiness] = useState<AuthReadiness | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [identities, setIdentities] = useState<LinkedIdentity[]>([]);
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -87,6 +90,46 @@ export function AccountSecurityPanel() {
   };
 
   useEffect(() => { void load(); }, []);
+
+  const sendCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy('send-code');
+    setError('');
+    setMessage('');
+    const result = await api<{ sent: boolean }>('/api/auth/email/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    setBusy(null);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setEmailSent(true);
+    setMessage('Sign-in code sent. Check your email.');
+  };
+
+  const verifyCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy('verify-code');
+    setError('');
+    setMessage('');
+    const result = await api<{ authenticated: boolean; created: boolean }>('/api/auth/email/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, token: code }),
+    });
+    setBusy(null);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setCode('');
+    setEmailSent(false);
+    setMessage(result.data.created ? 'Worker account created and signed in.' : 'Signed in. Your worker records can follow you.');
+    await load();
+  };
 
   const signOut = async (everywhere = false) => {
     setBusy(everywhere ? 'everywhere' : 'device');
@@ -142,7 +185,20 @@ export function AccountSecurityPanel() {
       <div className="form-actions" style={{ marginTop: 14 }}><button type="button" className="btn btn-secondary" onClick={() => void load()}><RefreshCw size={18} /> Check again</button></div>
     </div>}
 
-    {available === true && !authenticated && <div className="card card-pad"><div className="eyebrow">Signed out</div><h3 style={{ marginTop: 7 }}>No StageWire session is active.</h3><p className="help-text">Use the verified sign-in option provided for this build. StageWire will not accept an owner ID from the browser as a shortcut.</p></div>}
+    {available === true && !authenticated && <div className="card card-pad">
+      <div className="eyebrow">Verified worker sign-in</div>
+      <h3 style={{ marginTop: 7 }}>Use a code from your email.</h3>
+      <p className="help-text">No StageWire password to remember. Enter your email, then type the six-digit code we send.</p>
+      <form onSubmit={sendCode} className="form-grid" style={{ marginTop: 18 }}>
+        <div className="field full"><label htmlFor="stagewire-signin-email">Email</label><input id="stagewire-signin-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></div>
+        <div className="field full"><button type="submit" className="btn btn-primary" disabled={Boolean(busy)}><Mail size={18} /> {busy === 'send-code' ? 'Sending…' : emailSent ? 'Send another code' : 'Send sign-in code'}</button></div>
+      </form>
+      {emailSent && <form onSubmit={verifyCode} className="form-grid" style={{ marginTop: 18 }}>
+        <div className="field full"><label htmlFor="stagewire-signin-code">Six-digit code</label><input id="stagewire-signin-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></div>
+        <div className="field full"><button type="submit" className="btn btn-primary" disabled={Boolean(busy) || code.length !== 6}><KeyRound size={18} /> {busy === 'verify-code' ? 'Verifying…' : 'Verify and continue'}</button></div>
+      </form>}
+      <div className="privacy-rule" style={{ marginTop: 18 }}><ShieldCheck size={20} /><strong>The provider verifies the email; StageWire stores only its stable account ID and a protected session.</strong></div>
+    </div>}
 
     {available === true && authenticated && <div className="account-security-grid">
       <div className="card card-pad">
