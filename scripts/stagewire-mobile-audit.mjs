@@ -11,6 +11,8 @@ const app = read('artifacts/stagewire/src/App.tsx');
 const css = read('artifacts/stagewire/src/accessibility.css');
 const serviceWorker = read('artifacts/stagewire/public/stagewire-sw.js');
 const finishCall = read('artifacts/stagewire/src/pages/smart-finish-call.tsx');
+const outbox = read('artifacts/stagewire/src/offline-outbox.ts');
+const connectionNotice = read('artifacts/stagewire/src/components/connection-notice.tsx');
 
 assert.equal(manifest.display, 'standalone', 'StageWire must remain installable in standalone mode.');
 assert.ok(manifest.start_url, 'The web app manifest must define a start URL.');
@@ -30,5 +32,9 @@ assert.match(serviceWorker, /isApiRequest/, 'Offline shell must explicitly recog
 assert.match(serviceWorker, /isApiRequest\(url\)\) return/, 'Offline shell must never cache private API responses.');
 assert.match(finishCall, /Receipt was not locked\./, 'Failed closeouts must clearly say the receipt was not locked.');
 assert.match(finishCall, /unfinished closeout remains in this tab/, 'Failed closeouts must reassure workers that their draft remains.');
+assert.match(outbox, /x-stagewire-action-id/, 'Queued workday actions must carry duplicate-safe action IDs.');
+assert.match(outbox, /authorization/, 'The outbox must explicitly exclude authorization headers from device storage.');
+assert.match(outbox, /cookie/, 'The outbox must explicitly exclude cookie headers from device storage.');
+assert.match(connectionNotice, /safely waiting on this device/, 'Workers must see when actions are waiting for signal.');
 
 console.log('StageWire mobile readiness audit passed.');
