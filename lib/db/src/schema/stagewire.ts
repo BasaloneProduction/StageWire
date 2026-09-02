@@ -159,9 +159,11 @@ export const callChecklistItems = pgTable("call_checklist_items", {
   isCustom: boolean("is_custom").notNull().default(false),
   isSuggested: boolean("is_suggested").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  clientActionId: text("client_action_id"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => [
   index("call_checklist_items_call_id_idx").on(table.callId),
+  uniqueIndex("call_checklist_items_client_action_unique").on(table.callId, table.clientActionId),
 ]);
 
 export const callNotes = pgTable("call_notes", {
@@ -169,9 +171,11 @@ export const callNotes = pgTable("call_notes", {
   callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
   category: text("category"),
+  clientActionId: text("client_action_id"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => [
   index("call_notes_call_id_idx").on(table.callId),
+  uniqueIndex("call_notes_client_action_unique").on(table.callId, table.clientActionId),
 ]);
 
 export const callExpenses = pgTable("call_expenses", {
@@ -181,7 +185,9 @@ export const callExpenses = pgTable("call_expenses", {
   category: text("category").notNull().default("Other"),
   description: text("description"),
   receiptAttachmentName: text("receipt_attachment_name"),
+  clientActionId: text("client_action_id"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => [
   index("call_expenses_call_id_idx").on(table.callId),
+  uniqueIndex("call_expenses_client_action_unique").on(table.callId, table.clientActionId),
 ]);
