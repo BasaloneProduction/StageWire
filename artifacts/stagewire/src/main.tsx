@@ -8,6 +8,7 @@ import { installDemoApi } from '@/demo-api';
 import { installDemoCredentialApi } from '@/demo-credentials';
 import { installDemoCrewKitApi } from '@/demo-crew-kit';
 import { installDemoFileMetadataApi } from '@/demo-file-metadata';
+import { installOfflineOutbox } from '@/offline-outbox';
 
 import './index.css';
 import './bp-theme.css';
@@ -17,6 +18,7 @@ installDemoApi();
 installDemoCredentialApi();
 installDemoCrewKitApi();
 installDemoFileMetadataApi();
+installOfflineOutbox();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
