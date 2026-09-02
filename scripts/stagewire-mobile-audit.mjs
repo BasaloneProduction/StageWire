@@ -13,6 +13,7 @@ const serviceWorker = read('artifacts/stagewire/public/stagewire-sw.js');
 const finishCall = read('artifacts/stagewire/src/pages/smart-finish-call.tsx');
 const outbox = read('artifacts/stagewire/src/offline-outbox.ts');
 const connectionNotice = read('artifacts/stagewire/src/components/connection-notice.tsx');
+const offlineWork = read('artifacts/stagewire/src/pages/offline-work.tsx');
 
 assert.equal(manifest.display, 'standalone', 'StageWire must remain installable in standalone mode.');
 assert.ok(manifest.start_url, 'The web app manifest must define a start URL.');
@@ -21,7 +22,7 @@ assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'The web a
 assert.match(main, /serviceWorker[\s\S]*register/, 'The production app must register its offline shell.');
 assert.match(main, /<InstallAppNotice\s*\/>/, 'Workers must have visible phone-install guidance.');
 
-for (const route of ['/calls', '/crew-kit', '/workday/:id', '/closeout/:id', '/receipt/:id', '/money', '/vault-v14', '/passport-v14']) {
+for (const route of ['/calls', '/offline-work', '/crew-kit', '/workday/:id', '/closeout/:id', '/receipt/:id', '/money', '/vault-v14', '/passport-v14']) {
   assert.ok(app.includes(`path="${route}"`), `Worker journey route missing: ${route}`);
 }
 
@@ -36,5 +37,9 @@ assert.match(outbox, /x-stagewire-action-id/, 'Queued workday actions must carry
 assert.match(outbox, /authorization/, 'The outbox must explicitly exclude authorization headers from device storage.');
 assert.match(outbox, /cookie/, 'The outbox must explicitly exclude cookie headers from device storage.');
 assert.match(connectionNotice, /safely waiting on this device/, 'Workers must see when actions are waiting for signal.');
+assert.match(connectionNotice, /Review saved actions/, 'Queued-action status must link to worker controls.');
+assert.match(offlineWork, /Upload now/, 'Workers must be able to retry saved actions.');
+assert.match(offlineWork, /Remove/, 'Workers must be able to remove a saved action.');
+assert.match(offlineWork, /Sign-in headers and cookies are never stored/, 'Offline action controls must explain the privacy boundary.');
 
 console.log('StageWire mobile readiness audit passed.');
