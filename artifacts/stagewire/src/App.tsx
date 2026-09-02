@@ -1,23 +1,23 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Archive, ArrowRight, BadgeCheck, BookOpenCheck, BriefcaseBusiness, CalendarDays, CheckCircle2, ChevronRight, Clock3, HardHat, HeartHandshake, LayoutDashboard, LockKeyhole, MapPin, Menu, Plus, ReceiptText, RefreshCw, Save, Timer, UserRound, WalletCards } from 'lucide-react';
 import { getGetDashboardQueryKey, getListCallsQueryKey, useCreateCall, useGetDashboard, useGetProfile, useHealthCheck, useListCalls, type Call, type CallInput } from '@workspace/api-client-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
-import NotFound from '@/pages/not-found';
-import ActiveCallPage from '@/pages/active-call';
-import EditCallPage from '@/pages/edit-call';
-import SmartFinishCallPage from '@/pages/smart-finish-call';
-import WorkReceiptPage from '@/pages/work-receipt';
-import CallCorrectionPage from '@/pages/call-correction';
-import WorkerVaultPage from '@/pages/worker-vault';
-import CareerPassportV14Page from '@/pages/career-passport-v14';
-import WorkerSetupPage from '@/pages/worker-setup';
-import MoneyCenterPage from '@/pages/money-center';
-import WorkLifePage from '@/pages/work-life';
-import LearningCenterPage from '@/pages/learning-center';
-import CrewKitPage from '@/pages/crew-kit';
+const NotFound = lazy(() => import('@/pages/not-found'));
+const ActiveCallPage = lazy(() => import('@/pages/active-call'));
+const EditCallPage = lazy(() => import('@/pages/edit-call'));
+const SmartFinishCallPage = lazy(() => import('@/pages/smart-finish-call'));
+const WorkReceiptPage = lazy(() => import('@/pages/work-receipt'));
+const CallCorrectionPage = lazy(() => import('@/pages/call-correction'));
+const WorkerVaultPage = lazy(() => import('@/pages/worker-vault'));
+const CareerPassportV14Page = lazy(() => import('@/pages/career-passport-v14'));
+const WorkerSetupPage = lazy(() => import('@/pages/worker-setup'));
+const MoneyCenterPage = lazy(() => import('@/pages/money-center'));
+const WorkLifePage = lazy(() => import('@/pages/work-life'));
+const LearningCenterPage = lazy(() => import('@/pages/learning-center'));
+const CrewKitPage = lazy(() => import('@/pages/crew-kit'));
 const queryClient = new QueryClient();
 const CALL_ROLES = ['Stagehand', 'Up Rigger', 'Down Rigger', 'Pusher', 'Audio', 'Lighting', 'Video', 'Carpentry', 'Forklift/Aerial Lift Operator', 'Show Crew/Deck', 'Other'];
 function formatDate(value: string | null | undefined, options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }) { if (!value) return 'Not set'; const date = new Date(value.includes('T') ? value : `${value}T12:00:00`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', options).format(date); }
@@ -41,6 +41,7 @@ function RoleField() { return <div className="field"><label htmlFor="role">Role 
 function TextAreaField({ label, name }: { label: string; name: string }) { return <div className="field"><label htmlFor={name}>{label}</label><textarea id={name} name={name} rows={2} /></div>; }
 function CallCard({ call }: { call: Call }) { const date = new Date(`${call.workDate}T12:00:00`); const crewKitHref = `/crew-kit?role=${encodeURIComponent(call.role)}&callId=${encodeURIComponent(String(call.id))}`; const isFinished = call.status === 'finished'; return <div className="card call-card"><div className="date-block"><strong className="date-day">{date.getDate()}</strong><span className="date-month">{date.toLocaleString('en-US', { month: 'short' })}</span></div><div className="call-main"><div className="call-title">{call.showName}</div><div className="call-meta">{call.venue} · {call.role} · {formatTime(call.scheduledStart)}</div>{isFinished && <div className="call-meta">{call.hours}h · {money(call.gross)}</div>}</div><div className="call-card-actions"><span className={`badge badge-${call.status}`}>{call.status}</span>{!isFinished ? <><Link href={`/edit-call/${call.id}`} className="btn btn-quiet">Edit</Link><Link href={crewKitHref} className="btn btn-quiet"><HardHat size={16} /> Kit</Link><Link href={`/workday/${call.id}`} className="btn btn-primary">Open call</Link></> : <Link href={`/receipt/${call.id}`} className="btn btn-quiet"><ReceiptText size={16} /> Receipt</Link>}</div></div>; }
 function PageFrame({ children }: { children: ReactNode }) { return <div className="page-wrap">{children}</div>; }
-function Router() { const [location] = useLocation(); useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, [location]); return <ErrorBoundary resetKey={location}><AppShell><Switch><Route path="/" component={DashboardPage} /><Route path="/calls" component={CallsPage} /><Route path="/crew-kit" component={CrewKitPage} /><Route path="/money" component={MoneyCenterPage} /><Route path="/work-life" component={WorkLifePage} /><Route path="/learning" component={LearningCenterPage} /><Route path="/edit-call/:id" component={EditCallPage} /><Route path="/workday/:id" component={ActiveCallPage} /><Route path="/closeout/:id" component={SmartFinishCallPage} /><Route path="/receipt/:id" component={WorkReceiptPage} /><Route path="/correct/:id" component={CallCorrectionPage} /><Route path="/vault" component={WorkerVaultPage} /><Route path="/vault-v14" component={WorkerVaultPage} /><Route path="/profile" component={WorkerSetupPage} /><Route path="/worker-setup" component={WorkerSetupPage} /><Route path="/passport" component={CareerPassportV14Page} /><Route path="/passport-v14" component={CareerPassportV14Page} /><Route component={NotFound} /></Switch></AppShell></ErrorBoundary>; }
+function RouteLoading() { return <div className="page-wrap"><div className="card card-pad" role="status"><h2>Opening StageWire…</h2><p className="help-text" style={{ marginTop: 8 }}>Loading this section.</p></div></div>; }
+function Router() { const [location] = useLocation(); useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, [location]); return <ErrorBoundary resetKey={location}><AppShell><Suspense fallback={<RouteLoading />}><Switch><Route path="/" component={DashboardPage} /><Route path="/calls" component={CallsPage} /><Route path="/crew-kit" component={CrewKitPage} /><Route path="/money" component={MoneyCenterPage} /><Route path="/work-life" component={WorkLifePage} /><Route path="/learning" component={LearningCenterPage} /><Route path="/edit-call/:id" component={EditCallPage} /><Route path="/workday/:id" component={ActiveCallPage} /><Route path="/closeout/:id" component={SmartFinishCallPage} /><Route path="/receipt/:id" component={WorkReceiptPage} /><Route path="/correct/:id" component={CallCorrectionPage} /><Route path="/vault" component={WorkerVaultPage} /><Route path="/vault-v14" component={WorkerVaultPage} /><Route path="/profile" component={WorkerSetupPage} /><Route path="/worker-setup" component={WorkerSetupPage} /><Route path="/passport" component={CareerPassportV14Page} /><Route path="/passport-v14" component={CareerPassportV14Page} /><Route component={NotFound} /></Switch></Suspense></AppShell></ErrorBoundary>; }
 function App() { return <QueryClientProvider client={queryClient}><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></QueryClientProvider>; }
 export default App;
