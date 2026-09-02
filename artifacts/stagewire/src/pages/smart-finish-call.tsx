@@ -70,6 +70,7 @@ export default function SmartFinishCallPage() {
   const [endEdited, setEndEdited] = useState(() => Boolean(draft.actualEnd));
   const [previewBreak, setPreviewBreak] = useState(() => Number(draft.breakMinutes || 0));
   const [previewInitialized, setPreviewInitialized] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   const data = workday.data;
   const call = data?.call;
@@ -88,6 +89,16 @@ export default function SmartFinishCallPage() {
     if (!draft.breakMinutes) setPreviewBreak(call.breakMinutes || 0);
     setPreviewInitialized(true);
   }, [call, draft.breakMinutes, previewInitialized, previewStart]);
+
+  useEffect(() => {
+    const updateConnection = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateConnection);
+    window.addEventListener('offline', updateConnection);
+    return () => {
+      window.removeEventListener('online', updateConnection);
+      window.removeEventListener('offline', updateConnection);
+    };
+  }, []);
 
   if (!Number.isFinite(callId) || callId <= 0) {
     return <div className="page-wrap"><div className="error-box"><strong>Invalid call.</strong></div></div>;
@@ -202,6 +213,16 @@ export default function SmartFinishCallPage() {
         </div>
       </div>
 
+      {!isOnline && (
+        <div className="warning-box" role="alert" style={{ marginBottom: 22 }}>
+          <AlertCircle size={22} />
+          <div>
+            <strong>This device appears offline.</strong>
+            <p>Keep this tab open. StageWire is keeping your unfinished closeout here; finish the call after your signal returns.</p>
+          </div>
+        </div>
+      )}
+
       <form className="card card-pad form-card" onSubmit={submit} onInput={saveDraft}>
         <div className="eyebrow">Confirm the closeout</div>
         <div className="privacy-rule" style={{ marginTop: 14 }}><ShieldCheck size={18} /><span>Your unfinished closeout is kept in this browser tab session so a refresh does not wipe what you just typed. The draft is cleared when the receipt locks.</span></div>
@@ -280,7 +301,15 @@ export default function SmartFinishCallPage() {
         )}
 
         {validationError && <div className="error-box" role="alert" style={{ marginTop: 20 }}><AlertCircle size={20} /> {validationError}</div>}
-        {finish.error && <div className="error-box" role="alert" style={{ marginTop: 20 }}><AlertCircle size={20} /> {(finish.error as Error).message || 'This call could not be finished.'}</div>}
+        {finish.error && (
+          <div className="error-box" role="alert" style={{ marginTop: 20 }}>
+            <AlertCircle size={20} />
+            <div>
+              <strong>Receipt was not locked.</strong>
+              <p>{(finish.error as Error).message || 'This call could not be finished.'} Your unfinished closeout remains in this tab. Retry when your signal returns.</p>
+            </div>
+          </div>
+        )}
 
         <div className="closeout-lock-note"><ShieldCheck size={19} /><span>Finishing creates the permanent Call Receipt. You can still view the record afterward, but the workday is treated as completed.</span></div>
 
