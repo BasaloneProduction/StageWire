@@ -47,5 +47,7 @@ jobs:
         run: pnpm --dir artifacts/api-server build
       - name: Typecheck StageWire
         run: pnpm --dir artifacts/stagewire typecheck
+      - name: Audit StageWire mobile readiness
+        run: pnpm run audit:stagewire-mobile
       - name: Build StageWire
         run: pnpm --dir artifacts/stagewire build
