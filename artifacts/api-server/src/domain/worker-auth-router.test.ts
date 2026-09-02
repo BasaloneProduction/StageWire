@@ -37,6 +37,8 @@ test("account security controls require a valid StageWire session", () => {
   assert.match(authRouter, /Keep at least one sign-in method linked/, "a worker must never unlink the final login method");
 });
 
-test("auth router stays unmounted until a real provider resolver exists", () => {
-  assert.doesNotMatch(routeIndex, /worker-auth-router|createWorkerAuthRouter/, "preview routes must not expose the production auth router without a verified identity provider");
+test("auth router mounts only behind a valid provider configuration", () => {
+  assert.match(routeIndex, /const authConfig = supabaseAuthConfig\(\)/);
+  assert.match(routeIndex, /if \(authConfig\) \{\s*router\.use\(createSupabaseEmailAuthRouter\(authConfig\)\);\s*router\.use\(createWorkerAuthRouter\(createSupabaseIdentityResolver\(authConfig\)\)\);/s);
+  assert.match(routeIndex, /else \{\s*router\.use\(workerIdentityRouter\);\s*\}/s);
 });
