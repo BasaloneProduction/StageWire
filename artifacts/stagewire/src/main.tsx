@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ConnectionNotice } from '@/components/connection-notice';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { InstallAppNotice } from '@/components/install-app-notice';
 import { installDemoApi } from '@/demo-api';
 import { installDemoCredentialApi } from '@/demo-credentials';
 import { installDemoCrewKitApi } from '@/demo-crew-kit';
@@ -82,6 +83,7 @@ createRoot(document.getElementById('root')!, {
       <span>Do not enter real personal, financial, or credential data on a shared or public deployment. Authentication and cross-device identity are still being built.</span>
     </div>
     <ConnectionNotice />
+    <InstallAppNotice />
     <App />
   </ErrorBoundary>,
 );
