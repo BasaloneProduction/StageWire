@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authReadinessRouter from "./auth-readiness";
 import workerIdentityRouter from "./worker-identity";
 import credentialRouter from "./credentials";
 import crewKitRouter from "./crew-kit";
@@ -12,6 +13,7 @@ import openCallEditRouter from "./open-call-edits";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authReadinessRouter);
 router.use(workerIdentityRouter);
 router.use(credentialRouter);
 router.use(crewKitRouter);
