@@ -9,6 +9,11 @@
 .preview-safety-notice span, .connection-notice span { color: hsl(var(--muted-foreground)); }
 .connection-offline { background: hsl(var(--destructive) / .09); border-bottom-color: hsl(var(--destructive) / .35); }
 .connection-restored { background: hsl(var(--primary) / .09); }
+.install-app-notice { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 18px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--primary) / .08); }
+.install-app-notice > div:first-child { display: grid; gap: 3px; }
+.install-app-notice span { color: hsl(var(--muted-foreground)); line-height: 1.45; }
+.install-app-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.install-app-actions .btn { min-height: 48px; }
 
 .eyebrow,
 .badge,
@@ -69,6 +74,9 @@ button:disabled, .btn:disabled { cursor: not-allowed; opacity: 0.62; }
   html { font-size: 18px; }
   body { line-height: 1.5; }
   .preview-safety-notice, .connection-notice { display: grid; gap: 5px; padding: 12px 14px; font-size: .92rem; }
+  .install-app-notice { display: grid; gap: 12px; padding: 14px; }
+  .install-app-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .install-app-actions .btn { width: 100%; min-height: 56px; }
   .page-wrap { padding-left: 14px; padding-right: 14px; padding-bottom: 92px; }
   .card-pad { padding: 20px 18px; }
   .page-heading h1 { font-size: clamp(2.25rem, 12vw, 3.3rem); line-height: 1; }
