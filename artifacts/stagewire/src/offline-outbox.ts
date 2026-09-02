@@ -100,6 +100,27 @@ function storableHeaders(headers: Headers) {
   return values;
 }
 
+function queuedResponse(entry: OutboxEntry) {
+  const callId = Number(entry.url.match(/\/calls\/(\d+)/)?.[1] || 0);
+  const data = entry.body ? JSON.parse(entry.body) : {};
+  const base = { ...data, id: -Date.now(), callId, createdAt: entry.createdAt, _stagewireQueued: true };
+
+  if (/\/notes$/.test(new URL(entry.url).pathname)) {
+    return new Response(JSON.stringify(base), { status: 202, headers: { 'content-type': 'application/json' } });
+  }
+  if (/\/expenses$/.test(new URL(entry.url).pathname)) {
+    return new Response(JSON.stringify(base), { status: 202, headers: { 'content-type': 'application/json' } });
+  }
+  if (/\/checklist\/items$/.test(new URL(entry.url).pathname) && entry.method === 'POST') {
+    return new Response(JSON.stringify({ ...base, checked: false, isCustom: true, isSuggested: false, sortOrder: 999 }), {
+      status: 202,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  throw new OfflineQueuedError(entry.id, entry.label);
+}
+
 async function queueRequest(input: RequestInfo | URL, init: RequestInit, url: URL, method: string, headers: Headers) {
   const body = await requestBody(input, init);
   const existing = readQueue().find((entry) =>
@@ -107,7 +128,7 @@ async function queueRequest(input: RequestInfo | URL, init: RequestInit, url: UR
     && entry.method === method
     && entry.body === body,
   );
-  if (existing) throw new OfflineQueuedError(existing.id, existing.label);
+  if (existing) return queuedResponse(existing);
 
   const id = headers.get('x-stagewire-action-id') || actionId();
   headers.set('x-stagewire-action-id', id);
@@ -123,7 +144,7 @@ async function queueRequest(input: RequestInfo | URL, init: RequestInit, url: UR
   const queue = [...readQueue(), entry];
   writeQueue(queue);
   dispatch({ pending: queue.length });
-  throw new OfflineQueuedError(id, entry.label);
+  return queuedResponse(entry);
 }
 
 export async function replayOfflineOutbox() {
