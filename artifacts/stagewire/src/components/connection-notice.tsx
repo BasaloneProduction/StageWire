@@ -58,6 +58,7 @@ export function ConnectionNotice() {
             ? `${pending} workday action${pending === 1 ? ' is' : 's are'} safely waiting on this device. StageWire will upload ${pending === 1 ? 'it' : 'them'} when signal returns.`
             : 'Keep this screen open. Workday actions can be saved on this device and uploaded when signal returns.'}
         </span>
+        {pending > 0 && <a className="btn btn-quiet connection-action" href={`${import.meta.env.BASE_URL}offline-work`}>Review saved actions</a>}
       </div>
     );
   }
@@ -67,6 +68,7 @@ export function ConnectionNotice() {
       <div className="connection-notice connection-restored print-hide" role="status" aria-live="polite">
         <strong>Connection available.</strong>
         <span>Uploading {pending} saved workday action{pending === 1 ? '' : 's'}…</span>
+        <a className="btn btn-quiet connection-action" href={`${import.meta.env.BASE_URL}offline-work`}>Review saved actions</a>
       </div>
     );
   }
