@@ -1,5 +1,5 @@
-const CACHE_NAME = 'stagewire-shell-v1';
-const APP_SHELL = ['./'];
+const CACHE_NAME = 'stagewire-shell-v2';
+const APP_SHELL = ['./', './manifest.webmanifest', './favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -8,28 +8,42 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('stagewire-shell-') && key !== CACHE_NAME).map((key) => caches.delete(key)))),
+    caches.keys().then((keys) => Promise.all(
+      keys
+        .filter((key) => key.startsWith('stagewire-shell-') && key !== CACHE_NAME)
+        .map((key) => caches.delete(key)),
+    )),
   );
   self.clients.claim();
 });
+
+function isApiRequest(url) {
+  return url.pathname === '/api'
+    || url.pathname.startsWith('/api/')
+    || url.pathname.includes('/api/');
+}
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  const isApiRequest = url.pathname === '/api' || url.pathname.startsWith('/api/') || url.pathname.includes('/api/');
-  if (url.origin !== self.location.origin || isApiRequest) return;
+  if (url.origin !== self.location.origin || isApiRequest(url)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
+          if (response.ok) {
+            const copy = response.clone();
+            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put('./', copy)));
+          }
           return response;
         })
-        .catch(() => caches.match('./')),
+        .catch(async () => {
+          const shell = await caches.match('./');
+          return shell || Response.error();
+        }),
     );
     return;
   }
@@ -40,11 +54,11 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok && response.type === 'basic') {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)));
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(() => cached || Response.error());
       return cached || network;
     }),
   );
