@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import {
   AddCallExpenseBody,
@@ -163,6 +163,11 @@ function errorMessage(error: unknown, fallback = "Please check the details and t
 function asNullable(value: string | null | undefined) {
   const clean = value?.trim();
   return clean ? clean : null;
+}
+
+function clientActionId(req: Request) {
+  const value = req.get("x-stagewire-action-id")?.trim();
+  return value && /^[a-zA-Z0-9._:-]{1,128}$/.test(value) ? value : null;
 }
 
 function callWithTotals(call: typeof calls.$inferSelect) {
@@ -576,12 +581,21 @@ router.post("/calls/:id/checklist/items", async (req, res) => {
     const { id } = AddChecklistItemParams.parse(req.params);
     const input = AddChecklistItemBody.parse(req.body);
     if (!await getCall(id)) return res.status(404).json({ error: "Call not found." });
+    const actionId = clientActionId(req);
+    if (actionId) {
+      const existingAction = (await db.select().from(callChecklistItems).where(and(
+        eq(callChecklistItems.callId, id),
+        eq(callChecklistItems.clientActionId, actionId),
+      )).limit(1))[0];
+      if (existingAction) return res.json(AddChecklistItemResponse.parse(existingAction));
+    }
     const item = (await db.insert(callChecklistItems).values({
       callId: id,
       label: input.label.trim(),
       isCustom: true,
       isSuggested: false,
       sortOrder: (await db.select().from(callChecklistItems).where(eq(callChecklistItems.callId, id))).length + 1,
+      clientActionId: actionId,
     }).returning())[0];
     return res.status(201).json(AddChecklistItemResponse.parse(item));
   } catch (error) {
@@ -640,10 +654,19 @@ router.post("/calls/:id/notes", async (req, res) => {
     const { id } = AddCallNoteParams.parse(req.params);
     const input = AddCallNoteBody.parse(req.body);
     if (!await getCall(id)) return res.status(404).json({ error: "Call not found." });
+    const actionId = clientActionId(req);
+    if (actionId) {
+      const existingAction = (await db.select().from(callNotes).where(and(
+        eq(callNotes.callId, id),
+        eq(callNotes.clientActionId, actionId),
+      )).limit(1))[0];
+      if (existingAction) return res.json(AddCallNoteResponse.parse(existingAction));
+    }
     const note = (await db.insert(callNotes).values({
       callId: id,
       text: input.text.trim(),
       category: asNullable(input.category),
+      clientActionId: actionId,
     }).returning())[0];
     return res.status(201).json(AddCallNoteResponse.parse(note));
   } catch (error) {
@@ -658,12 +681,21 @@ router.post("/calls/:id/expenses", async (req, res) => {
     const input = AddCallExpenseBody.parse(req.body);
     const call = await getCall(id);
     if (!call) return res.status(404).json({ error: "Call not found." });
+    const actionId = clientActionId(req);
+    if (actionId) {
+      const existingAction = (await db.select().from(callExpenses).where(and(
+        eq(callExpenses.callId, id),
+        eq(callExpenses.clientActionId, actionId),
+      )).limit(1))[0];
+      if (existingAction) return res.json(AddCallExpenseResponse.parse(existingAction));
+    }
     const expense = (await db.insert(callExpenses).values({
       callId: id,
       amount: input.amount,
       category: input.category.trim(),
       description: asNullable(input.description),
       receiptAttachmentName: asNullable(input.receiptAttachmentName),
+      clientActionId: actionId,
     }).returning())[0];
     const category = input.category.toLowerCase();
     await db.update(calls).set({
