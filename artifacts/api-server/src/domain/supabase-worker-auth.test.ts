@@ -13,7 +13,7 @@ test("Supabase authentication fails closed unless both hosted settings are valid
   assert.match(source, /return Boolean\(supabaseAuthConfig\(env\)\)/);
 });
 
-test("email sign-in uses passwordless OTP and verifies the provider user server-side", () => {
+test("email sign-in sends a passwordless email and supports server-side token verification", () => {
   assert.match(source, /router\.post\("\/auth\/email\/start"/);
   assert.match(source, /router\.post\("\/auth\/email\/verify"/);
   assert.match(source, /\/otp/);

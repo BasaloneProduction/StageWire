@@ -40,15 +40,17 @@ test("preview reports account readiness without pretending records are portable"
   assert.match(page, /Not connected/);
 });
 
-test("configured builds expose accessible passwordless email sign-in", () => {
+test("configured builds expose accessible passwordless email-link sign-in", () => {
+  const bootstrap = fs.readFileSync(new URL("../../../stagewire/src/main.tsx", import.meta.url), "utf8");
   assert.match(page, /\/api\/auth\/email\/start/);
-  assert.match(page, /\/api\/auth\/email\/verify/);
   assert.match(page, /type="email"/);
-  assert.match(page, /autoComplete="one-time-code"/);
-  assert.match(page, /pattern="\[0-9\]\{6\}"/);
-  assert.match(page, /Send sign-in code/);
-  assert.match(page, /Verify and continue/);
+  assert.match(page, /Email me a sign-in link/);
+  assert.match(page, /secure link Supabase sends you/);
   assert.match(page, /No StageWire password to remember/);
+  assert.match(bootstrap, /window\.location\.hash/);
+  assert.match(bootstrap, /params\.get\('access_token'\)/);
+  assert.match(bootstrap, /\/api\/auth\/signup/);
+  assert.match(bootstrap, /sessionStorage\.setItem\(AUTH_MESSAGE_KEY/);
 });
 
 test("preview stays honest and the UI cannot remove the final login", () => {

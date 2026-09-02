@@ -45,7 +45,6 @@ export function AccountSecurityPanel() {
   const [authenticated, setAuthenticated] = useState(false);
   const [identities, setIdentities] = useState<LinkedIdentity[]>([]);
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -89,7 +88,15 @@ export function AccountSecurityPanel() {
     setIdentities(linked.data.identities);
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const callbackMessage = sessionStorage.getItem('stagewire-auth-message');
+    if (callbackMessage) {
+      sessionStorage.removeItem('stagewire-auth-message');
+      if (/could not|did not work/i.test(callbackMessage)) setError(callbackMessage);
+      else setMessage(callbackMessage);
+    }
+    void load();
+  }, []);
 
   const sendCode = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -107,28 +114,7 @@ export function AccountSecurityPanel() {
       return;
     }
     setEmailSent(true);
-    setMessage('Sign-in code sent. Check your email.');
-  };
-
-  const verifyCode = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setBusy('verify-code');
-    setError('');
-    setMessage('');
-    const result = await api<{ authenticated: boolean; created: boolean }>('/api/auth/email/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, token: code }),
-    });
-    setBusy(null);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
-    setCode('');
-    setEmailSent(false);
-    setMessage(result.data.created ? 'Worker account created and signed in.' : 'Signed in. Your worker records can follow you.');
-    await load();
+    setMessage('Secure sign-in link sent. Check your email and tap the link.');
   };
 
   const signOut = async (everywhere = false) => {
@@ -187,16 +173,13 @@ export function AccountSecurityPanel() {
 
     {available === true && !authenticated && <div className="card card-pad">
       <div className="eyebrow">Verified worker sign-in</div>
-      <h3 style={{ marginTop: 7 }}>Use a code from your email.</h3>
-      <p className="help-text">No StageWire password to remember. Enter your email, then type the six-digit code we send.</p>
+      <h3 style={{ marginTop: 7 }}>Use a secure link from your email.</h3>
+      <p className="help-text">No StageWire password to remember. Enter your email, then tap the secure link Supabase sends you.</p>
       <form onSubmit={sendCode} className="form-grid" style={{ marginTop: 18 }}>
         <div className="field full"><label htmlFor="stagewire-signin-email">Email</label><input id="stagewire-signin-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></div>
-        <div className="field full"><button type="submit" className="btn btn-primary" disabled={Boolean(busy)}><Mail size={18} /> {busy === 'send-code' ? 'Sending…' : emailSent ? 'Send another code' : 'Send sign-in code'}</button></div>
+        <div className="field full"><button type="submit" className="btn btn-primary" disabled={Boolean(busy)}><Mail size={18} /> {busy === 'send-code' ? 'Sending…' : emailSent ? 'Send another link' : 'Email me a sign-in link'}</button></div>
       </form>
-      {emailSent && <form onSubmit={verifyCode} className="form-grid" style={{ marginTop: 18 }}>
-        <div className="field full"><label htmlFor="stagewire-signin-code">Six-digit code</label><input id="stagewire-signin-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></div>
-        <div className="field full"><button type="submit" className="btn btn-primary" disabled={Boolean(busy) || code.length !== 6}><KeyRound size={18} /> {busy === 'verify-code' ? 'Verifying…' : 'Verify and continue'}</button></div>
-      </form>}
+      {emailSent && <div className="privacy-rule" style={{ marginTop: 18 }}><Mail size={20} /><strong>Open the newest StageWire email on this device and tap its sign-in link.</strong></div>}
       <div className="privacy-rule" style={{ marginTop: 18 }}><ShieldCheck size={20} /><strong>The provider verifies the email; StageWire stores only its stable account ID and a protected session.</strong></div>
     </div>}
 
