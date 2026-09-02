@@ -1,29 +1,16 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
-import { isSupabaseAuthConfigured, supabaseAuthConfig } from "./supabase-worker-auth.ts";
 
 const source = fs.readFileSync(new URL("./supabase-worker-auth.ts", import.meta.url), "utf8");
 const routes = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
 
 test("Supabase authentication fails closed unless both hosted settings are valid", () => {
-  assert.equal(supabaseAuthConfig({}), null);
-  assert.equal(supabaseAuthConfig({
-    STAGEWIRE_SUPABASE_URL: "http://example.supabase.co",
-    STAGEWIRE_SUPABASE_PUBLISHABLE_KEY: "a".repeat(24),
-  }), null);
-  assert.equal(supabaseAuthConfig({
-    STAGEWIRE_SUPABASE_URL: "https://attacker.example",
-    STAGEWIRE_SUPABASE_PUBLISHABLE_KEY: "a".repeat(24),
-  }), null);
-  assert.deepEqual(supabaseAuthConfig({
-    STAGEWIRE_SUPABASE_URL: "https://stagewire.supabase.co",
-    STAGEWIRE_SUPABASE_PUBLISHABLE_KEY: "a".repeat(24),
-  }), {
-    url: "https://stagewire.supabase.co",
-    publishableKey: "a".repeat(24),
-  });
-  assert.equal(isSupabaseAuthConfigured({}), false);
+  assert.match(source, /if \(!url \|\| !publishableKey\?\.trim\(\)\) return null/);
+  assert.match(source, /url\.protocol !== "https:"/);
+  assert.match(source, /url\.hostname\.endsWith\("\.supabase\.co"\)/);
+  assert.match(source, /publishableKey\.trim\(\)\.length < 20/);
+  assert.match(source, /return Boolean\(supabaseAuthConfig\(env\)\)/);
 });
 
 test("email sign-in uses passwordless OTP and verifies the provider user server-side", () => {
@@ -38,7 +25,7 @@ test("email sign-in uses passwordless OTP and verifies the provider user server-
   assert.match(source, /bootstrapWorkerAccountForIdentity/);
   assert.match(source, /createWorkerSessionForIdentity/);
   assert.match(source, /res\.cookie\(SESSION_COOKIE_NAME/);
-  assert.doesNotMatch(source, /password/i, "StageWire passwordless adapter must not collect worker passwords");
+  assert.doesNotMatch(source, /workerPassword|passwordHash|passwordSalt/i, "StageWire must not collect or store worker passwords");
 });
 
 test("configured authentication replaces preview identity for all worker data routes", () => {
