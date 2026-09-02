@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, Link2, LogOut, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { CheckCircle2, KeyRound, Link2, LogOut, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 
+type AuthReadiness = {
+  mode: 'preview' | 'production';
+  signInAvailable: boolean;
+  recordsFollowSignIn: boolean;
+  provider: string | null;
+};
 type SessionState = { authenticated: boolean };
 type LinkedIdentity = { id: number; provider: string; createdAt: string };
 type IdentityList = { identities: LinkedIdentity[] };
@@ -35,7 +41,7 @@ function dateLabel(value: string) {
 }
 
 export function AccountSecurityPanel() {
-  const [available, setAvailable] = useState<boolean | null>(null);
+  const [readiness, setReadiness] = useState<AuthReadiness | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [identities, setIdentities] = useState<LinkedIdentity[]>([]);
   const [message, setMessage] = useState('');
@@ -44,21 +50,29 @@ export function AccountSecurityPanel() {
 
   const load = async () => {
     setError('');
+    const ready = await api<AuthReadiness>('/api/auth/readiness');
+    if (!ready.ok) {
+      setReadiness(null);
+      setAuthenticated(false);
+      setIdentities([]);
+      setError(ready.message);
+      return;
+    }
+
+    setReadiness(ready.data);
+    if (!ready.data.signInAvailable) {
+      setAuthenticated(false);
+      setIdentities([]);
+      return;
+    }
+
     const session = await api<SessionState>('/api/auth/session');
     if (!session.ok) {
-      if (session.status === 404) {
-        setAvailable(false);
-        setAuthenticated(false);
-        setIdentities([]);
-        return;
-      }
-      setAvailable(true);
       setAuthenticated(false);
       setIdentities([]);
       setError(session.message);
       return;
     }
-    setAvailable(true);
     setAuthenticated(session.data.authenticated);
     if (!session.data.authenticated) {
       setIdentities([]);
@@ -105,17 +119,30 @@ export function AccountSecurityPanel() {
     await load();
   };
 
+  const available = readiness?.signInAvailable ?? null;
+
   return <section id="account-security" className="setup-section" aria-labelledby="account-security-title">
     <div className="setup-section-head"><span className="setup-step"><ShieldCheck size={18} /></span><div><div className="eyebrow">Account &amp; security</div><h2 id="account-security-title">Protect the worker record.</h2><p className="subtitle">Sign-ins and sessions should belong to you without exposing StageWire's internal owner ID.</p></div></div>
 
     {message && <div className="success-box" role="status"><ShieldCheck size={20} /> {message}</div>}
-    {error && <div className="error-box" role="alert"><KeyRound size={20} /><div><strong>Account action did not finish.</strong><p>{error}</p></div></div>}
+    {error && <div className="error-box" role="alert"><KeyRound size={20} /><div><strong>Account check did not finish.</strong><p>{error}</p></div></div>}
 
-    {available === null && <div className="card card-pad"><div className="eyebrow">Checking account layer</div><p className="help-text" style={{ marginTop: 8 }}>StageWire is checking whether authenticated account controls are enabled on this build.</p></div>}
+    {readiness === null && !error && <div className="card card-pad"><div className="eyebrow">Checking account layer</div><p className="help-text" style={{ marginTop: 8 }}>StageWire is checking whether verified sign-in and cross-device records are enabled on this build.</p></div>}
 
-    {available === false && <div className="card card-pad"><div className="eyebrow">Preview build</div><h3 style={{ marginTop: 7 }}>Real worker login is intentionally not mounted yet.</h3><p className="help-text">The account/session backend is built, but this preview stays blocked from pretending to be secure until a real identity provider verifies the worker. Do not enter real sensitive information into a shared preview.</p><div className="form-actions" style={{ marginTop: 14 }}><button type="button" className="btn btn-secondary" onClick={() => void load()}><RefreshCw size={18} /> Check again</button></div></div>}
+    {available === false && <div className="card card-pad">
+      <div className="eyebrow">Preview only</div>
+      <h3 style={{ marginTop: 7 }}>This is not a portable worker account yet.</h3>
+      <p className="help-text">Records in this preview are not attached to a verified person and are not guaranteed to follow you to another device. Use sample information only.</p>
+      <div className="experience-list" style={{ marginTop: 16 }}>
+        <div className="experience-row"><span><b><CheckCircle2 size={17} style={{ verticalAlign: '-3px', marginRight: 7 }} />Private worker ownership</b><small>Built into the database</small></span><strong>Ready</strong></div>
+        <div className="experience-row"><span><b><CheckCircle2 size={17} style={{ verticalAlign: '-3px', marginRight: 7 }} />Secure session controls</b><small>Sign out one device or every device</small></span><strong>Ready</strong></div>
+        <div className="experience-row"><span><b><KeyRound size={17} style={{ verticalAlign: '-3px', marginRight: 7 }} />Verified sign-in service</b><small>Required before records can safely follow a worker</small></span><strong>Not connected</strong></div>
+      </div>
+      <div className="privacy-rule" style={{ marginTop: 16 }}><ShieldCheck size={20} /><strong>StageWire will not fake a login or accept an owner ID from the browser.</strong></div>
+      <div className="form-actions" style={{ marginTop: 14 }}><button type="button" className="btn btn-secondary" onClick={() => void load()}><RefreshCw size={18} /> Check again</button></div>
+    </div>}
 
-    {available === true && !authenticated && <div className="card card-pad"><div className="eyebrow">Signed out</div><h3 style={{ marginTop: 7 }}>No StageWire session is active.</h3><p className="help-text">Sign-in buttons will come from the verified identity provider when production authentication is mounted. StageWire will not accept an owner ID from the browser as a shortcut.</p></div>}
+    {available === true && !authenticated && <div className="card card-pad"><div className="eyebrow">Signed out</div><h3 style={{ marginTop: 7 }}>No StageWire session is active.</h3><p className="help-text">Use the verified sign-in option provided for this build. StageWire will not accept an owner ID from the browser as a shortcut.</p></div>}
 
     {available === true && authenticated && <div className="account-security-grid">
       <div className="card card-pad">
