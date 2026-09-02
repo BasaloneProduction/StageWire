@@ -1,14 +1,16 @@
 import { Router, type IRouter } from "express";
 
-const router: IRouter = Router();
+export function createAuthReadinessRouter(signInAvailable: boolean): IRouter {
+  const router: IRouter = Router();
 
-router.get("/auth/readiness", (_req, res) => {
-  return res.json({
-    mode: "preview",
-    signInAvailable: false,
-    recordsFollowSignIn: false,
-    provider: null,
+  router.get("/auth/readiness", (_req, res) => {
+    return res.json({
+      mode: signInAvailable ? "production" : "preview",
+      signInAvailable,
+      recordsFollowSignIn: signInAvailable,
+      provider: signInAvailable ? "supabase" : null,
+    });
   });
-});
 
-export default router;
+  return router;
+}
