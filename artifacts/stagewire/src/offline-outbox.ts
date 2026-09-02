@@ -52,8 +52,20 @@ function dispatch(detail: OutboxDetail) {
   window.dispatchEvent(new CustomEvent<OutboxDetail>(OUTBOX_EVENT, { detail }));
 }
 
+export type OfflineOutboxAction = Pick<OutboxEntry, 'id' | 'label' | 'createdAt'>;
+
 export function getOfflineOutboxCount() {
   return readQueue().length;
+}
+
+export function listOfflineOutboxActions(): OfflineOutboxAction[] {
+  return readQueue().map(({ id, label, createdAt }) => ({ id, label, createdAt }));
+}
+
+export function discardOfflineOutboxAction(id: string) {
+  const queue = readQueue().filter((entry) => entry.id !== id);
+  writeQueue(queue);
+  dispatch({ pending: queue.length });
 }
 
 export function subscribeToOfflineOutbox(listener: (detail: OutboxDetail) => void) {
