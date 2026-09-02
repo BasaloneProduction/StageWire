@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, CheckCheck, HardHat, Plus, RotateCcw, Trash2, Upload, Wrench } from 'lucide-react';
 import { Link } from 'wouter';
@@ -29,10 +29,31 @@ const roleKits: Record<string, Item[]> = {
     { id: 'boots', label: 'Work boots' },
     { id: 'light', label: 'Headlamp' },
   ],
+  'Up Rigger': [
+    { id: 'helmet', label: 'Approved helmet' },
+    { id: 'harness', label: 'Inspected harness' },
+    { id: 'fall-gear', label: 'Approved fall-protection / positioning gear' },
+    { id: 'rescue', label: 'Confirm site rescue plan and assigned rescue gear' },
+    { id: 'gloves', label: 'Work gloves' },
+    { id: 'boots', label: 'Work boots' },
+    { id: 'light', label: 'Headlamp with fresh batteries' },
+    { id: 'radio', label: 'Radio / communication method if issued' },
+  ],
+  'Down Rigger': [
+    { id: 'helmet', label: 'Approved helmet' },
+    { id: 'gloves', label: 'Work gloves' },
+    { id: 'boots', label: 'Work boots' },
+    { id: 'light', label: 'Flashlight / headlamp' },
+    { id: 'wrench', label: 'Adjustable wrench / approved hand tools' },
+    { id: 'radio', label: 'Radio / communication method if issued' },
+    { id: 'motor-check', label: 'Confirm motor, cable and control assignment' },
+  ],
   Pusher: [
     { id: 'gloves', label: 'Work gloves' },
     { id: 'boots', label: 'Work boots' },
     { id: 'radio', label: 'Radio if issued' },
+    { id: 'light', label: 'Flashlight / headlamp' },
+    { id: 'multi', label: 'Multitool / adjustable wrench if personally carried' },
     { id: 'water', label: 'Water' },
     { id: 'sharpie', label: 'Sharpie' },
   ],
@@ -62,6 +83,22 @@ const roleKits: Record<string, Item[]> = {
     { id: 'eye', label: 'Eye protection' },
     { id: 'measure', label: 'Tape measure' },
     { id: 'pencil', label: 'Pencil / marker' },
+  ],
+  'Forklift / Aerial Lift Operator': [
+    { id: 'boots', label: 'Work boots' },
+    { id: 'vest', label: 'High-visibility vest if required' },
+    { id: 'helmet', label: 'Approved helmet if required' },
+    { id: 'authorization', label: 'Confirm current site / employer authorization' },
+    { id: 'inspection', label: 'Complete the assigned pre-use inspection' },
+    { id: 'spotter', label: 'Confirm spotter and communication plan' },
+  ],
+  'Show Crew / Deck': [
+    { id: 'gloves', label: 'Work gloves' },
+    { id: 'boots', label: 'Quiet work shoes / boots required by the call' },
+    { id: 'black', label: 'Show blacks / dress requirement' },
+    { id: 'light', label: 'Low-light flashlight with safe color/filter if required' },
+    { id: 'radio', label: 'Radio / headset if issued' },
+    { id: 'running', label: 'Review running order, cues and assigned track' },
   ],
 };
 
@@ -101,8 +138,12 @@ function kitRole(requested: string) {
   const value = requested.trim().toLowerCase();
   const exact = Object.keys(roleKits).find((role) => role.toLowerCase() === value);
   if (exact) return exact;
+  if (value.includes('up rigger')) return 'Up Rigger';
+  if (value.includes('down rigger')) return 'Down Rigger';
   if (value.includes('rigger')) return 'Rigger';
   if (value.includes('pusher')) return 'Pusher';
+  if (value.includes('forklift') || value.includes('aerial') || value.includes('lift operator')) return 'Forklift / Aerial Lift Operator';
+  if (value.includes('show crew') || value.includes('deck')) return 'Show Crew / Deck';
   if (value.includes('audio') || value.includes('sound')) return 'Audio';
   if (value.includes('light') || value === 'lx') return 'Lighting';
   if (value.includes('video') || value.includes('led')) return 'Video';
@@ -120,6 +161,8 @@ export default function CrewKitPage() {
   const initial = params();
   const [role, setRole] = useState(initial.role);
   const [legacy, setLegacy] = useState(readLegacyState);
+  const [newItem, setNewItem] = useState('');
+  const [resetConfirm, setResetConfirm] = useState(false);
   const queryClient = useQueryClient();
   const crewKit = useGetCrewKitState();
   const update = useUpdateCrewKitState();
@@ -154,6 +197,7 @@ export default function CrewKitPage() {
   const reset = () => {
     const removeKeys = new Set(items.map((item) => keyFor(item.id)));
     saveState({ ...state, readyMarks: state.readyMarks.filter((mark) => !removeKeys.has(mark)) });
+    setResetConfirm(false);
   };
 
   const markAllReady = () => {
@@ -162,12 +206,12 @@ export default function CrewKitPage() {
     saveState({ ...state, readyMarks: [...next] });
   };
 
-  const add = () => {
-    const label = window.prompt('Add something you personally want on this checklist');
-    if (!label?.trim()) return;
-    const clean = label.trim().slice(0, 160);
+  const add = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!newItem.trim()) return;
+    const clean = newItem.trim().slice(0, 160);
     const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    saveState({ ...state, customItems: [...state.customItems, { id, role, label: clean }] });
+    saveState({ ...state, customItems: [...state.customItems, { id, role, label: clean }] }, () => setNewItem(''));
   };
 
   const remove = (id: string) => {
@@ -215,7 +259,8 @@ export default function CrewKitPage() {
 
       <div className="experience-list" style={{ marginTop: 20 }}>{items.map((item) => { const key = keyFor(item.id); const isCustom = item.id.startsWith('custom-'); const isReady = ready.has(key); return <div className="experience-row" key={item.id}><button type="button" disabled={update.isPending} onClick={() => toggle(item.id)} style={{ flex: 1, textAlign: 'left', background: 'none', border: 0, color: 'inherit', padding: 0 }}><span><b>{item.label}</b><small>{isReady ? 'Packed / ready' : isCustom ? 'Your saved item · tap when ready' : 'Tap when ready'}</small></span></button><span className={`badge ${isReady ? 'badge-active' : 'badge-finished'}`}>{isReady ? <><Check size={15}/> Ready</> : 'Not yet'}</span>{isCustom && <button className="icon-btn" disabled={update.isPending} aria-label={`Remove ${item.label}`} onClick={() => remove(item.id)}><Trash2 size={17}/></button>}</div>; })}</div>
 
-      <div className="form-actions" style={{ marginTop: 18 }}><button className="btn btn-secondary" disabled={update.isPending} onClick={add}><Plus size={18}/> Add my item</button>{!allReady && items.length > 0 && <button className="btn btn-secondary" disabled={update.isPending} onClick={markAllReady}><CheckCheck size={18}/> Mark all ready</button>}<button className="btn btn-quiet" disabled={update.isPending} onClick={reset}><RotateCcw size={17}/> Reset this checklist</button><Link href={returnHref} className="btn btn-primary"><ArrowLeft size={18}/> {returnLabel}</Link></div>
+      <form onSubmit={add} className="form-actions" style={{ marginTop: 18 }}><input aria-label="Personal Crew Kit item" value={newItem} maxLength={160} onChange={(event) => setNewItem(event.target.value)} placeholder="Add something you personally carry"/><button className="btn btn-secondary" type="submit" disabled={update.isPending || !newItem.trim()}><Plus size={18}/> Add my item</button></form>
+      <div className="form-actions" style={{ marginTop: 14 }}>{!allReady && items.length > 0 && <button className="btn btn-secondary" disabled={update.isPending} onClick={markAllReady}><CheckCheck size={18}/> Mark all ready</button>}{resetConfirm ? <><button className="btn btn-primary" disabled={update.isPending} onClick={reset}><RotateCcw size={17}/> Confirm reset</button><button className="btn btn-quiet" type="button" onClick={() => setResetConfirm(false)}>Keep my checks</button></> : <button className="btn btn-quiet" disabled={update.isPending} onClick={() => setResetConfirm(true)}><RotateCcw size={17}/> Reset this checklist</button>}<Link href={returnHref} className="btn btn-primary"><ArrowLeft size={18}/> {returnLabel}</Link></div>
     </section>
 
     <section className="card card-pad" style={{ marginTop: 22 }}><div className="eyebrow">Your kit follows you</div><h2 style={{ marginTop: 7 }}>Personal items stay with the role. Ready marks stay with the call.</h2><p className="subtitle">Crew Kit now saves to the worker record instead of only this browser. When signed-in accounts are mounted, the same personal role items and call prep state can follow the worker across devices. A new call still starts with its own ready marks.</p></section>
