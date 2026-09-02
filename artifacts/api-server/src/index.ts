@@ -1,8 +1,9 @@
 import app from "./app";
 import { assertReleaseSafety } from "./domain/release-safety";
+import { isSupabaseAuthConfigured } from "./domain/supabase-worker-auth";
 import { logger } from "./lib/logger";
 
-assertReleaseSafety(process.env["NODE_ENV"]);
+assertReleaseSafety(process.env["NODE_ENV"], isSupabaseAuthConfigured());
 
 const rawPort = process.env["PORT"];
 
