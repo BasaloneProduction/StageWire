@@ -1,0 +1,54 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+import { isSupabaseAuthConfigured, supabaseAuthConfig } from "./supabase-worker-auth.ts";
+
+const source = fs.readFileSync(new URL("./supabase-worker-auth.ts", import.meta.url), "utf8");
+const routes = fs.readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
+
+test("Supabase authentication fails closed unless both hosted settings are valid", () => {
+  assert.equal(supabaseAuthConfig({}), null);
+  assert.equal(supabaseAuthConfig({
+    STAGEWIRE_SUPABASE_URL: "http://example.supabase.co",
+    STAGEWIRE_SUPABASE_PUBLISHABLE_KEY: "a".repeat(24),
+  }), null);
+  assert.equal(supabaseAuthConfig({
+    STAGEWIRE_SUPABASE_URL: "https://attacker.example",
+    STAGEWIRE_SUPABASE_PUBLISHABLE_KEY: "a".repeat(24),
+  }), null);
+  assert.deepEqual(supabaseAuthConfig({
+    STAGEWIRE_SUPABASE_URL: "https://stagewire.supabase.co",
+    STAGEWIRE_SUPABASE_PUBLISHABLE_KEY: "a".repeat(24),
+  }), {
+    url: "https://stagewire.supabase.co",
+    publishableKey: "a".repeat(24),
+  });
+  assert.equal(isSupabaseAuthConfigured({}), false);
+});
+
+test("email sign-in uses passwordless OTP and verifies the provider user server-side", () => {
+  assert.match(source, /router\.post\("\/auth\/email\/start"/);
+  assert.match(source, /router\.post\("\/auth\/email\/verify"/);
+  assert.match(source, /\/otp/);
+  assert.match(source, /create_user:\s*true/);
+  assert.match(source, /\/verify/);
+  assert.match(source, /verifiedUser\(config, accessToken\)/);
+  assert.match(source, /\/user/);
+  assert.match(source, /Authorization:\s*`Bearer \$\{accessToken\}`/);
+  assert.match(source, /bootstrapWorkerAccountForIdentity/);
+  assert.match(source, /createWorkerSessionForIdentity/);
+  assert.match(source, /res\.cookie\(SESSION_COOKIE_NAME/);
+  assert.doesNotMatch(source, /password/i, "StageWire passwordless adapter must not collect worker passwords");
+});
+
+test("configured authentication replaces preview identity for all worker data routes", () => {
+  assert.match(routes, /if \(authConfig\)/);
+  assert.match(routes, /createSupabaseEmailAuthRouter\(authConfig\)/);
+  assert.match(routes, /createWorkerAuthRouter\(createSupabaseIdentityResolver\(authConfig\)\)/);
+  assert.match(routes, /sessionWorkerMiddleware\(\)/);
+  assert.match(routes, /else \{\s*router\.use\(workerIdentityRouter\)/s);
+  assert.ok(
+    routes.indexOf("router.use(sessionWorkerMiddleware())") < routes.indexOf("router.use(credentialRouter)"),
+    "signed-in worker ownership must be established before private data routes",
+  );
+});
