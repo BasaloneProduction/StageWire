@@ -1,0 +1,36 @@
+{
+  "id": "./",
+  "name": "StageWire",
+  "short_name": "StageWire",
+  "description": "Worker-first call tracking for stagehands, riggers, and live-production professionals.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Calls",
+      "short_name": "Calls",
+      "description": "Open the StageWire call log",
+      "url": "./calls"
+    },
+    {
+      "name": "Crew Kit",
+      "short_name": "Crew Kit",
+      "description": "Check work gear before a call",
+      "url": "./crew-kit"
+    }
+  ]
+}

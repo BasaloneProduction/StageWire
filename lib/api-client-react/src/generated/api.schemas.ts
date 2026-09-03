@@ -13,6 +13,88 @@ export interface HealthStatus {
   status: string;
 }
 
+export type CredentialStatus = typeof CredentialStatus[keyof typeof CredentialStatus];
+
+
+export const CredentialStatus = {
+  current: 'current',
+  planned: 'planned',
+} as const;
+
+export interface Credential {
+  id: number;
+  name: string;
+  issuer: string;
+  /** @nullable */
+  expires: string | null;
+  status: CredentialStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CredentialInputStatus = typeof CredentialInputStatus[keyof typeof CredentialInputStatus];
+
+
+export const CredentialInputStatus = {
+  current: 'current',
+  planned: 'planned',
+} as const;
+
+export interface CredentialInput {
+  /** @minLength 1 */
+  name: string;
+  issuer?: string;
+  /** @nullable */
+  expires?: string | null;
+  status: CredentialInputStatus;
+}
+
+export type CredentialUpdateInputStatus = typeof CredentialUpdateInputStatus[keyof typeof CredentialUpdateInputStatus];
+
+
+export const CredentialUpdateInputStatus = {
+  current: 'current',
+  planned: 'planned',
+} as const;
+
+export interface CredentialUpdateInput {
+  /** @minLength 1 */
+  name?: string;
+  issuer?: string;
+  /** @nullable */
+  expires?: string | null;
+  status?: CredentialUpdateInputStatus;
+}
+
+export interface CrewKitCustomItem {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  role: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  label: string;
+}
+
+export interface CrewKitState {
+  /** @maxItems 200 */
+  customItems: CrewKitCustomItem[];
+  /**
+     * @maxItems 500
+     * @items.minLength 1
+     * @items.maxLength 220
+     */
+  readyMarks: string[];
+}
+
 export interface WorkerProfile {
   id: number;
   displayName: string;
@@ -32,6 +114,15 @@ export interface WorkerProfile {
   /** @nullable */
   profilePhotoName: string | null;
   privateByDefault: boolean;
+  sharePhoto: boolean;
+  shareHomeBase: boolean;
+  shareSkills: boolean;
+  shareCertifications: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent: number;
 }
 
 export interface ProfileInput {
@@ -51,6 +142,15 @@ export interface ProfileInput {
   emergencyContact?: string | null;
   /** @nullable */
   profilePhotoName?: string | null;
+  sharePhoto?: boolean;
+  shareHomeBase?: boolean;
+  shareSkills?: boolean;
+  shareCertifications?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent?: number;
 }
 
 export type CallPayType = typeof CallPayType[keyof typeof CallPayType];
@@ -366,5 +466,7 @@ export interface DashboardSummary {
   grossThisMonth: number;
   /** @nullable */
   upcomingCall: Call | null;
+  /** @nullable */
+  activeCall: Call | null;
 }
 

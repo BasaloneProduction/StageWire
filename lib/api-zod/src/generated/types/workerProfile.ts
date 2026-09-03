@@ -25,4 +25,13 @@ export interface WorkerProfile {
   /** @nullable */
   profilePhotoName: string | null;
   privateByDefault: boolean;
+  sharePhoto: boolean;
+  shareHomeBase: boolean;
+  shareSkills: boolean;
+  shareCertifications: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent: number;
 }

@@ -1,17 +1,21 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
+  index,
   integer,
   pgTable,
   real,
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const workerProfiles = pgTable("worker_profiles", {
   id: serial("id").primaryKey(),
+  ownerKey: text("owner_key").notNull().unique("worker_profiles_owner_key_unique"),
   displayName: text("display_name").notNull().default("StageWire Worker"),
   homeCityState: text("home_city_state").notNull().default(""),
   phone: text("phone").notNull().default(""),
@@ -25,10 +29,84 @@ export const workerProfiles = pgTable("worker_profiles", {
   emergencyContact: text("emergency_contact"),
   profilePhotoName: text("profile_photo_name"),
   privateByDefault: boolean("private_by_default").notNull().default(true),
+  sharePhoto: boolean("share_photo").notNull().default(false),
+  shareHomeBase: boolean("share_home_base").notNull().default(false),
+  shareSkills: boolean("share_skills").notNull().default(true),
+  shareCertifications: boolean("share_certifications").notNull().default(true),
+  taxReservePercent: integer("tax_reserve_percent").notNull().default(25),
+}, (table) => [
+
+  check("worker_profiles_tax_reserve_percent_check", sql`${table.taxReservePercent} between 0 and 100`),
+]);
+
+export const workerIdentities = pgTable("worker_identities", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(),
+  subject: text("subject").notNull(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("worker_identities_provider_subject_unique").on(table.provider, table.subject),
+  index("worker_identities_owner_key_idx").on(table.ownerKey),
+]);
+
+export const workerSessions = pgTable("worker_sessions", {
+  sessionHash: text("session_hash").primaryKey(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  identityId: integer("identity_id").notNull().references(() => workerIdentities.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
+  revokedAt: timestamp("revoked_at", { mode: "string" }),
+}, (table) => [
+  index("worker_sessions_owner_key_idx").on(table.ownerKey),
+  index("worker_sessions_identity_id_idx").on(table.identityId),
+  index("worker_sessions_expires_at_idx").on(table.expiresAt),
+]);
+
+export const workerCredentials = pgTable("worker_credentials", {
+  id: serial("id").primaryKey(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  issuer: text("issuer").notNull().default(""),
+  expires: date("expires"),
+  status: text("status").notNull().default("current"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => [
+  index("worker_credentials_owner_key_idx").on(table.ownerKey),
+  index("worker_credentials_owner_expires_idx").on(table.ownerKey, table.expires),
+  check("worker_credentials_status_check", sql`${table.status} in ('current', 'planned')`),
+]);
+
+export const workerCrewKitState = pgTable("worker_crew_kit_state", {
+  ownerKey: text("owner_key").primaryKey().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  customItemsJson: text("custom_items_json").notNull().default("[]"),
+  readyMarksJson: text("ready_marks_json").notNull().default("[]"),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 });
+
+export const workerFileMetadata = pgTable("worker_file_metadata", {
+  id: serial("id").primaryKey(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  sizeBytes: integer("size_bytes").notNull().default(0),
+  mimeType: text("mime_type").notNull().default(""),
+  storageKey: text("storage_key"),
+  storageStatus: text("storage_status").notNull().default("metadata"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => [
+  index("worker_file_metadata_owner_key_idx").on(table.ownerKey),
+  index("worker_file_metadata_owner_kind_idx").on(table.ownerKey, table.kind),
+  check("worker_file_metadata_kind_check", sql`${table.kind} in ('certification', 'document', 'profile-photo')`),
+  check("worker_file_metadata_storage_status_check", sql`${table.storageStatus} in ('metadata', 'stored')`),
+  check("worker_file_metadata_size_check", sql`${table.sizeBytes} >= 0`),
+]);
 
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
+  ownerKey: text("owner_key").notNull().references(() => workerProfiles.ownerKey, { onDelete: "restrict" }),
   venue: text("venue").notNull(),
   venueAddress: text("venue_address"),
   showName: text("show_name").notNull(),
@@ -68,33 +146,48 @@ export const calls = pgTable("calls", {
   mealPenaltyAmount: real("meal_penalty_amount").notNull().default(0),
   completedAt: timestamp("completed_at", { mode: "string" }),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("calls_owner_key_idx").on(table.ownerKey),
+  index("calls_owner_work_date_idx").on(table.ownerKey, table.workDate),
+]);
 
 export const callChecklistItems = pgTable("call_checklist_items", {
   id: serial("id").primaryKey(),
-  callId: integer("call_id").notNull(),
+  callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   checked: boolean("checked").notNull().default(false),
   isCustom: boolean("is_custom").notNull().default(false),
   isSuggested: boolean("is_suggested").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  clientActionId: text("client_action_id"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("call_checklist_items_call_id_idx").on(table.callId),
+  uniqueIndex("call_checklist_items_client_action_unique").on(table.callId, table.clientActionId),
+]);
 
 export const callNotes = pgTable("call_notes", {
   id: serial("id").primaryKey(),
-  callId: integer("call_id").notNull(),
+  callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
   category: text("category"),
+  clientActionId: text("client_action_id"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("call_notes_call_id_idx").on(table.callId),
+  uniqueIndex("call_notes_client_action_unique").on(table.callId, table.clientActionId),
+]);
 
 export const callExpenses = pgTable("call_expenses", {
   id: serial("id").primaryKey(),
-  callId: integer("call_id").notNull(),
+  callId: integer("call_id").notNull().references(() => calls.id, { onDelete: "cascade" }),
   amount: real("amount").notNull(),
   category: text("category").notNull().default("Other"),
   description: text("description"),
   receiptAttachmentName: text("receipt_attachment_name"),
+  clientActionId: text("client_action_id"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("call_expenses_call_id_idx").on(table.callId),
+  uniqueIndex("call_expenses_client_action_unique").on(table.callId, table.clientActionId),
+]);

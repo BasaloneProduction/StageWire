@@ -44,6 +44,30 @@ export const getDashboardResponseUpcomingCallOneHoursMin = 0;
 
 export const getDashboardResponseUpcomingCallOneGrossMin = 0;
 
+export const getDashboardResponseActiveCallOneMinimumHoursMin = 0;
+
+export const getDashboardResponseActiveCallOneBreakMinutesMin = 0;
+
+export const getDashboardResponseActiveCallOneHourlyRateMin = 0;
+
+export const getDashboardResponseActiveCallOneExpenseAmountMin = 0;
+
+export const getDashboardResponseActiveCallOneMileageMin = 0;
+
+export const getDashboardResponseActiveCallOneParkingExpenseMin = 0;
+
+export const getDashboardResponseActiveCallOneTollExpenseMin = 0;
+
+export const getDashboardResponseActiveCallOneOvertimeHoursMin = 0;
+
+export const getDashboardResponseActiveCallOneDoubleTimeHoursMin = 0;
+
+export const getDashboardResponseActiveCallOneMealPenaltyAmountMin = 0;
+
+export const getDashboardResponseActiveCallOneHoursMin = 0;
+
+export const getDashboardResponseActiveCallOneGrossMin = 0;
+
 
 
 export const GetDashboardResponse = zod.object({
@@ -93,6 +117,49 @@ export const GetDashboardResponse = zod.object({
   "completedAt": zod.string().nullable(),
   "hours": zod.number().min(getDashboardResponseUpcomingCallOneHoursMin),
   "gross": zod.number().min(getDashboardResponseUpcomingCallOneGrossMin)
+}).nullable(),
+  "activeCall": zod.object({
+  "id": zod.int(),
+  "venue": zod.string(),
+  "venueAddress": zod.string().nullable(),
+  "showName": zod.string(),
+  "workDate": zod.coerce.date(),
+  "scheduledStart": zod.string().nullable(),
+  "estimatedEnd": zod.string().nullable(),
+  "role": zod.string(),
+  "department": zod.string().nullable(),
+  "employer": zod.string().nullable(),
+  "crewContactName": zod.string().nullable(),
+  "crewContactPhone": zod.string().nullable(),
+  "parkingInstructions": zod.string().nullable(),
+  "crewEntrance": zod.string().nullable(),
+  "loadingDockInfo": zod.string().nullable(),
+  "dressRequirements": zod.string().nullable(),
+  "ppeRequirements": zod.string().nullable(),
+  "toolRequirements": zod.string().nullable(),
+  "generalNotes": zod.string().nullable(),
+  "payType": zod.enum(['hourly', 'day', 'flat']),
+  "minimumHours": zod.number().min(getDashboardResponseActiveCallOneMinimumHoursMin),
+  "status": zod.enum(['upcoming', 'arrived', 'active', 'finished']),
+  "arrivalAt": zod.string().nullable(),
+  "actualStart": zod.string().nullable(),
+  "actualEnd": zod.string().nullable(),
+  "breakMinutes": zod.int().min(getDashboardResponseActiveCallOneBreakMinutesMin),
+  "hourlyRate": zod.number().min(getDashboardResponseActiveCallOneHourlyRateMin),
+  "expenseAmount": zod.number().min(getDashboardResponseActiveCallOneExpenseAmountMin),
+  "mileage": zod.number().min(getDashboardResponseActiveCallOneMileageMin),
+  "parkingExpense": zod.number().min(getDashboardResponseActiveCallOneParkingExpenseMin),
+  "tollExpense": zod.number().min(getDashboardResponseActiveCallOneTollExpenseMin),
+  "expenseDescription": zod.string().nullable(),
+  "note": zod.string().nullable(),
+  "receiptAttachmentName": zod.string().nullable(),
+  "workPhotoName": zod.string().nullable(),
+  "overtimeHours": zod.number().min(getDashboardResponseActiveCallOneOvertimeHoursMin),
+  "doubleTimeHours": zod.number().min(getDashboardResponseActiveCallOneDoubleTimeHoursMin),
+  "mealPenaltyAmount": zod.number().min(getDashboardResponseActiveCallOneMealPenaltyAmountMin),
+  "completedAt": zod.string().nullable(),
+  "hours": zod.number().min(getDashboardResponseActiveCallOneHoursMin),
+  "gross": zod.number().min(getDashboardResponseActiveCallOneGrossMin)
 }).nullable()
 })
 
@@ -101,6 +168,9 @@ export const GetDashboardResponse = zod.object({
  * @summary Get the private worker profile
  */
 export const getProfileResponseYearsExperienceMin = 0;
+
+export const getProfileResponseTaxReservePercentMin = 0;
+export const getProfileResponseTaxReservePercentMax = 100;
 
 
 
@@ -118,7 +188,12 @@ export const GetProfileResponse = zod.object({
   "bio": zod.string().nullable(),
   "emergencyContact": zod.string().nullable(),
   "profilePhotoName": zod.string().nullable(),
-  "privateByDefault": zod.boolean()
+  "privateByDefault": zod.boolean(),
+  "sharePhoto": zod.boolean(),
+  "shareHomeBase": zod.boolean(),
+  "shareSkills": zod.boolean(),
+  "shareCertifications": zod.boolean(),
+  "taxReservePercent": zod.int().min(getProfileResponseTaxReservePercentMin).max(getProfileResponseTaxReservePercentMax)
 })
 
 
@@ -126,6 +201,9 @@ export const GetProfileResponse = zod.object({
  * @summary Save the private worker profile
  */
 export const updateProfileBodyYearsExperienceMin = 0;
+
+export const updateProfileBodyTaxReservePercentMin = 0;
+export const updateProfileBodyTaxReservePercentMax = 100;
 
 
 
@@ -141,10 +219,18 @@ export const UpdateProfileBody = zod.object({
   "certifications": zod.array(zod.string()).optional(),
   "bio": zod.string().nullish(),
   "emergencyContact": zod.string().nullish(),
-  "profilePhotoName": zod.string().nullish()
+  "profilePhotoName": zod.string().nullish(),
+  "sharePhoto": zod.boolean().optional(),
+  "shareHomeBase": zod.boolean().optional(),
+  "shareSkills": zod.boolean().optional(),
+  "shareCertifications": zod.boolean().optional(),
+  "taxReservePercent": zod.int().min(updateProfileBodyTaxReservePercentMin).max(updateProfileBodyTaxReservePercentMax).optional()
 })
 
 export const updateProfileResponseYearsExperienceMin = 0;
+
+export const updateProfileResponseTaxReservePercentMin = 0;
+export const updateProfileResponseTaxReservePercentMax = 100;
 
 
 
@@ -162,7 +248,12 @@ export const UpdateProfileResponse = zod.object({
   "bio": zod.string().nullable(),
   "emergencyContact": zod.string().nullable(),
   "profilePhotoName": zod.string().nullable(),
-  "privateByDefault": zod.boolean()
+  "privateByDefault": zod.boolean(),
+  "sharePhoto": zod.boolean(),
+  "shareHomeBase": zod.boolean(),
+  "shareSkills": zod.boolean(),
+  "shareCertifications": zod.boolean(),
+  "taxReservePercent": zod.int().min(updateProfileResponseTaxReservePercentMin).max(updateProfileResponseTaxReservePercentMax)
 })
 
 
@@ -1021,6 +1112,166 @@ export const AddCallExpenseResponse = zod.object({
   "description": zod.string().nullable(),
   "receiptAttachmentName": zod.string().nullable(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List the worker credential wallet
+ */
+export const ListCredentialsResponseItem = zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "issuer": zod.string(),
+  "expires": zod.coerce.date().nullable(),
+  "status": zod.enum(['current', 'planned']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListCredentialsResponse = zod.array(ListCredentialsResponseItem)
+
+
+/**
+ * @summary Add a worker credential
+ */
+
+
+
+export const CreateCredentialBody = zod.object({
+  "name": zod.string().min(1),
+  "issuer": zod.string().optional(),
+  "expires": zod.coerce.date().nullish(),
+  "status": zod.enum(['current', 'planned'])
+})
+
+export const CreateCredentialResponse = zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "issuer": zod.string(),
+  "expires": zod.coerce.date().nullable(),
+  "status": zod.enum(['current', 'planned']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a worker credential
+ */
+
+
+
+export const UpdateCredentialParams = zod.object({
+  "credentialId": zod.coerce.number().int().min(1)
+})
+
+
+
+
+export const UpdateCredentialBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "issuer": zod.string().optional(),
+  "expires": zod.coerce.date().nullish(),
+  "status": zod.enum(['current', 'planned']).optional()
+})
+
+export const UpdateCredentialResponse = zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "issuer": zod.string(),
+  "expires": zod.coerce.date().nullable(),
+  "status": zod.enum(['current', 'planned']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Remove a worker credential
+ */
+
+
+
+export const DeleteCredentialParams = zod.object({
+  "credentialId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteCredentialResponse = zod.void()
+
+
+/**
+ * @summary Get the worker-owned Crew Kit state
+ */
+export const getCrewKitStateResponseCustomItemsItemIdMax = 100;
+
+export const getCrewKitStateResponseCustomItemsItemRoleMax = 80;
+
+export const getCrewKitStateResponseCustomItemsItemLabelMax = 160;
+
+export const getCrewKitStateResponseCustomItemsMax = 200;
+
+export const getCrewKitStateResponseReadyMarksItemMax = 220;
+
+export const getCrewKitStateResponseReadyMarksMax = 500;
+
+
+
+export const GetCrewKitStateResponse = zod.object({
+  "customItems": zod.array(zod.object({
+  "id": zod.string().min(1).max(getCrewKitStateResponseCustomItemsItemIdMax),
+  "role": zod.string().min(1).max(getCrewKitStateResponseCustomItemsItemRoleMax),
+  "label": zod.string().min(1).max(getCrewKitStateResponseCustomItemsItemLabelMax)
+})).max(getCrewKitStateResponseCustomItemsMax),
+  "readyMarks": zod.array(zod.string().min(1).max(getCrewKitStateResponseReadyMarksItemMax)).max(getCrewKitStateResponseReadyMarksMax)
+})
+
+
+/**
+ * @summary Replace the worker-owned Crew Kit state
+ */
+export const updateCrewKitStateBodyCustomItemsItemIdMax = 100;
+
+export const updateCrewKitStateBodyCustomItemsItemRoleMax = 80;
+
+export const updateCrewKitStateBodyCustomItemsItemLabelMax = 160;
+
+export const updateCrewKitStateBodyCustomItemsMax = 200;
+
+export const updateCrewKitStateBodyReadyMarksItemMax = 220;
+
+export const updateCrewKitStateBodyReadyMarksMax = 500;
+
+
+
+export const UpdateCrewKitStateBody = zod.object({
+  "customItems": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateCrewKitStateBodyCustomItemsItemIdMax),
+  "role": zod.string().min(1).max(updateCrewKitStateBodyCustomItemsItemRoleMax),
+  "label": zod.string().min(1).max(updateCrewKitStateBodyCustomItemsItemLabelMax)
+})).max(updateCrewKitStateBodyCustomItemsMax),
+  "readyMarks": zod.array(zod.string().min(1).max(updateCrewKitStateBodyReadyMarksItemMax)).max(updateCrewKitStateBodyReadyMarksMax)
+})
+
+export const updateCrewKitStateResponseCustomItemsItemIdMax = 100;
+
+export const updateCrewKitStateResponseCustomItemsItemRoleMax = 80;
+
+export const updateCrewKitStateResponseCustomItemsItemLabelMax = 160;
+
+export const updateCrewKitStateResponseCustomItemsMax = 200;
+
+export const updateCrewKitStateResponseReadyMarksItemMax = 220;
+
+export const updateCrewKitStateResponseReadyMarksMax = 500;
+
+
+
+export const UpdateCrewKitStateResponse = zod.object({
+  "customItems": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateCrewKitStateResponseCustomItemsItemIdMax),
+  "role": zod.string().min(1).max(updateCrewKitStateResponseCustomItemsItemRoleMax),
+  "label": zod.string().min(1).max(updateCrewKitStateResponseCustomItemsItemLabelMax)
+})).max(updateCrewKitStateResponseCustomItemsMax),
+  "readyMarks": zod.array(zod.string().min(1).max(updateCrewKitStateResponseReadyMarksItemMax)).max(updateCrewKitStateResponseReadyMarksMax)
 })
 
 

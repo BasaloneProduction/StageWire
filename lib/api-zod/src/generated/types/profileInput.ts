@@ -23,4 +23,13 @@ export interface ProfileInput {
   emergencyContact?: string | null;
   /** @nullable */
   profilePhotoName?: string | null;
+  sharePhoto?: boolean;
+  shareHomeBase?: boolean;
+  shareSkills?: boolean;
+  shareCertifications?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  taxReservePercent?: number;
 }

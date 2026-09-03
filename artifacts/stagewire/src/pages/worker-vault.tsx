@@ -1,0 +1,184 @@
+import { useEffect, useState } from 'react';
+import { Archive, BadgeCheck, BookOpenCheck, Camera, Download, FileText, LockKeyhole, ReceiptText, Settings2, ShieldCheck, UserRound } from 'lucide-react';
+import { Link } from 'wouter';
+import { useGetProfile, useGetVault, useListCredentials, type Credential } from '@workspace/api-client-react';
+
+type EffectiveCredential = Credential & { effectiveStatus: 'current' | 'expiring' | 'expired' | 'planned' };
+type WorkerFileMetadata = {
+  id: number;
+  kind: 'certification' | 'document' | 'profile-photo';
+  name: string;
+  sizeBytes: number;
+  mimeType: string;
+  storageStatus: 'metadata' | 'stored';
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+function dateOnly(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : '';
+}
+
+function daysUntil(date: string) {
+  if (!date) return null;
+  const target = new Date(`${date}T12:00:00`).getTime();
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.ceil((target - today.getTime()) / 86400000);
+}
+
+function effectiveStatus(cert: Credential): EffectiveCredential['effectiveStatus'] {
+  if (cert.status === 'planned') return 'planned';
+  const days = daysUntil(dateOnly(cert.expires));
+  if (days !== null && days < 0) return 'expired';
+  if (days !== null && days <= 60) return 'expiring';
+  return 'current';
+}
+
+function money(value: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+}
+
+function workDate(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+function prettySize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function loadWorkerFileMetadata() {
+  const response = await fetch('/api/file-metadata', { credentials: 'same-origin' });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(typeof body?.error === 'string' ? body.error : 'StageWire could not load your saved file records.');
+  }
+  return body as WorkerFileMetadata[];
+}
+
+export default function WorkerVaultPage() {
+  const vault = useGetVault();
+  const profile = useGetProfile();
+  const credentialQuery = useListCredentials();
+  const [fileMetadata, setFileMetadata] = useState<WorkerFileMetadata[]>([]);
+  const [filesLoading, setFilesLoading] = useState(true);
+  const [filesError, setFilesError] = useState('');
+
+  const refreshFiles = async () => {
+    setFilesLoading(true);
+    setFilesError('');
+    try {
+      setFileMetadata(await loadWorkerFileMetadata());
+    } catch (error) {
+      setFilesError(error instanceof Error ? error.message : 'StageWire could not load your saved file records.');
+    } finally {
+      setFilesLoading(false);
+    }
+  };
+
+  useEffect(() => { void refreshFiles(); }, []);
+
+  const data = vault.data;
+  const worker = profile.data;
+  const learned: EffectiveCredential[] = (credentialQuery.data || []).map((cert) => ({ ...cert, effectiveStatus: effectiveStatus(cert) }));
+
+  if (vault.isLoading || profile.isLoading || credentialQuery.isLoading || filesLoading) {
+    return <div className="page-wrap"><div className="card card-pad"><h2>Opening The Vault…</h2></div></div>;
+  }
+
+  if (vault.isError || credentialQuery.isError || !data) {
+    return <div className="page-wrap"><div className="error-box"><strong>The Vault could not be opened.</strong><button className="btn btn-quiet" onClick={() => { vault.refetch(); credentialQuery.refetch(); void refreshFiles(); }}>Try again</button></div></div>;
+  }
+
+  if (filesError) {
+    return <div className="page-wrap"><div className="error-box"><strong>The Vault could not load your worker file records.</strong><p>{filesError}</p><button className="btn btn-quiet" onClick={() => void refreshFiles()}>Try again</button></div></div>;
+  }
+
+  const totalHours = data.calls.reduce((sum, call) => sum + call.hours, 0);
+  const totalGross = data.calls.reduce((sum, call) => sum + call.gross, 0);
+  const documentMetadata = fileMetadata.filter((item) => item.kind === 'document');
+  const certificationMetadata = fileMetadata.filter((item) => item.kind === 'certification');
+  const allDocuments = [
+    ...documentMetadata.map((item) => ({ name: item.name, detail: `${prettySize(item.sizeBytes)} · ${item.storageStatus === 'stored' ? 'stored file' : 'filename + details only'}` })),
+    ...data.documents.map((item) => ({ name: item.name, detail: 'call attachment record' })),
+  ];
+  const activeLearning = learned.filter((cert) => cert.effectiveStatus === 'current' || cert.effectiveStatus === 'expiring');
+  const credentialNames = Array.from(new Set([...data.certifications, ...activeLearning.map((cert) => cert.name)]));
+
+  const downloadBackup = () => {
+    const backup = {
+      format: 'stagewire-worker-backup',
+      version: '1.4',
+      exportedAt: new Date().toISOString(),
+      profile: worker ?? null,
+      vault: data,
+      learningCredentials: learned,
+      fileMetadata,
+      limitations: [
+        'Credential records are included from the worker-owned StageWire credential wallet.',
+        'Worker file metadata records are included; file bytes are not part of this JSON backup.',
+        'Browser-private Work / Life check-ins are intentionally separate and are not included in this career/work-record backup.',
+      ],
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const day = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `stagewire-backup-${day}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="page-wrap">
+      <div className="page-heading">
+        <div><div className="eyebrow">Worker-owned records</div><h1 style={{ marginTop: 10 }}>The Vault</h1><p className="subtitle">Finished calls, proof of work, certifications, skills, documents, and photos. Private until you choose to share.</p></div>
+        <div className="form-actions"><button className="btn btn-secondary" type="button" onClick={downloadBackup}><Download size={19} /> Download my records</button><Link href="/learning" className="btn btn-secondary"><BookOpenCheck size={19} /> Learning</Link><Link href="/worker-setup" className="btn btn-secondary"><Settings2 size={19} /> Worker setup</Link><Link href="/passport-v14" className="btn btn-primary"><BadgeCheck size={19} /> Career Passport</Link></div>
+      </div>
+
+      <section className="card card-pad vault-owner-card">
+        <div className="vault-owner-icon"><UserRound size={28} /></div>
+        <div><div className="eyebrow">Private owner</div><h2 style={{ marginTop: 5 }}>{worker?.displayName || 'Worker profile'}</h2><p className="subtitle">Profile contact information and worker file records stay private. Career Passport only uses fields you approve.</p></div>
+        <span className="badge badge-finished"><LockKeyhole size={15} /> Not public</span>
+      </section>
+
+      <section className="card card-pad" style={{ marginBottom: 22 }}>
+        <div className="finish-context"><div><div className="eyebrow">Take your records with you</div><h2 style={{ marginTop: 7 }}><Download size={21} /> Worker-owned backup</h2><p className="subtitle">Download a readable JSON backup of the records StageWire currently knows. This is your copy, not a sharing link.</p></div><button className="btn btn-primary" type="button" onClick={downloadBackup}><Download size={19} /> Download backup</button></div>
+        <div className="privacy-rule" style={{ marginTop: 16 }}><ShieldCheck size={18} /> The backup includes work records, profile data, the server credential wallet, and worker-owned file metadata. File bytes are not included, and browser-private Work / Life check-ins stay separate.</div>
+      </section>
+
+      <div className="card card-pad" style={{ marginBottom: 22 }}>
+        <div className="finish-context"><div><div className="eyebrow">Your permanent work record</div><h2 style={{ marginTop: 7 }}>{data.calls.length} finished {data.calls.length === 1 ? 'call' : 'calls'}</h2></div><span className="badge badge-active"><LockKeyhole size={15} /> Private by default</span></div>
+        <div className="stats-grid" style={{ marginTop: 18 }}><div className="card stat-card"><span className="stat-label">Recorded hours</span><strong className="stat-value">{totalHours.toFixed(1)}h</strong></div><div className="card stat-card"><span className="stat-label">Recorded gross</span><strong className="stat-value">{money(totalGross)}</strong></div><div className="card stat-card"><span className="stat-label">Current credentials</span><strong className="stat-value">{credentialNames.length}</strong></div><div className="card stat-card"><span className="stat-label">Work photos</span><strong className="stat-value">{data.photos.length}</strong></div></div>
+      </div>
+
+      <section style={{ marginBottom: 28 }}>
+        <div className="section-label"><h2>Call receipts</h2><span className="help-text">Tap a call to open its proof-of-work record.</span></div>
+        {data.calls.length === 0 ? <div className="card empty"><div className="empty-mark"><Archive size={25} /></div><h3>No finished calls yet.</h3><p style={{ marginTop: 8 }}>Finish your first call and StageWire will lock its receipt here.</p></div> : <div className="calls-list">{data.calls.map((call) => <Link href={`/receipt/${call.id}`} className="card call-card" key={call.id}><div className="call-date"><strong>{new Date(`${call.workDate}T12:00:00`).getDate()}</strong><span>{new Date(`${call.workDate}T12:00:00`).toLocaleString('en-US', { month: 'short' })}</span></div><div className="call-main"><div className="call-topline"><span className="badge badge-finished">Finished</span><span>{workDate(call.workDate)}</span></div><h3>{call.showName}</h3><p>{call.venue} · {call.role}</p></div><div className="call-money"><strong>{money(call.gross)}</strong><span>{call.hours.toFixed(1)}h</span><span className="link-text"><ReceiptText size={16} /> Receipt</span></div></Link>)}</div>}
+      </section>
+
+      <div className="passport-grid">
+        <section className="card card-pad">
+          <div className="eyebrow">Certifications</div><h2 style={{ marginTop: 8 }}>Credential wallet</h2>
+          {credentialNames.length ? <div className="chip-row" style={{ marginTop: 18 }}>{credentialNames.map((item) => <span className="chip" key={item}><ShieldCheck size={15} /> {item}</span>)}</div> : <p className="subtitle">No current certifications saved yet.</p>}
+          {learned.length > 0 && <div className="vault-items" style={{ marginTop: 16 }}>{learned.map((cert) => <div className="vault-item" key={cert.id}><span><BadgeCheck size={17} /> {cert.name}{cert.issuer ? ` · ${cert.issuer}` : ''}</span><span>{cert.effectiveStatus}{cert.expires ? ` · ${dateOnly(cert.expires)}` : ''}</span></div>)}</div>}
+          <p className="help-text" style={{ marginTop: 14 }}>Expired and planned credentials stay in this private history but are not counted as current proof and do not feed Career Passport.</p>
+          <div className="form-actions" style={{ marginTop: 16 }}><Link href="/learning" className="btn btn-quiet"><BookOpenCheck size={17} /> Manage in Learning</Link></div>
+          {certificationMetadata.length > 0 && <div className="vault-items" style={{ marginTop: 16 }}>{certificationMetadata.map((item) => <div className="vault-item" key={item.id}><span><FileText size={17} /> {item.name}</span><span>{prettySize(item.sizeBytes)} · {item.storageStatus === 'stored' ? 'stored file' : 'filename + details only'}</span></div>)}</div>}
+        </section>
+
+        <section className="card card-pad"><div className="eyebrow">Skills</div><h2 style={{ marginTop: 8 }}>What you can do</h2>{data.skills.length ? <div className="chip-row" style={{ marginTop: 18 }}>{data.skills.map((item) => <span className="chip" key={item}>{item}</span>)}</div> : <p className="subtitle">No skills saved yet.</p>}</section>
+        <section className="card card-pad"><div className="eyebrow">Documents</div><h2 style={{ marginTop: 8 }}>Private file records</h2>{allDocuments.length ? <div className="vault-items" style={{ marginTop: 14 }}>{allDocuments.map((item, index) => <div className="vault-item" key={`${item.name}-${index}`}><span><FileText size={17} /> {item.name}</span><span>{item.detail}</span></div>)}</div> : <p className="subtitle">No documents selected yet.</p>}</section>
+        <section className="card card-pad"><div className="eyebrow">Work photos</div><h2 style={{ marginTop: 8 }}>Visual record</h2>{data.photos.length ? <div className="vault-items" style={{ marginTop: 14 }}>{data.photos.map((item, index) => <div className="vault-item" key={`${item.callId}-${item.name}-${index}`}><span><Camera size={17} /> {item.name}</span><Link href={`/receipt/${item.callId}`} className="link-text">Call #{item.callId}</Link></div>)}</div> : <p className="subtitle">Work photos will collect here with their calls.</p>}</section>
+      </div>
+    </div>
+  );
+}
