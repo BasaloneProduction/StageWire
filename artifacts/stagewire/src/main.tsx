@@ -119,8 +119,8 @@ function renderStageWire() {
     <ErrorBoundary>
       <button className="skip-link print-hide" type="button" onClick={skipToMain}>Skip to main content</button>
       <div className="preview-safety-notice print-hide" role="note" aria-label="Preview safety notice">
-        <strong>Preview build — no worker accounts yet.</strong>
-        <span>Do not enter real personal, financial, or credential data on a shared or public deployment. Authentication and cross-device identity are still being built.</span>
+        <strong>Preview build — secure sign-in is active.</strong>
+        <span>Use only your own email and test information while StageWire is still in preview.</span>
       </div>
       <ConnectionNotice />
       <InstallAppNotice />

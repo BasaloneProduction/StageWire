@@ -15,7 +15,7 @@ import {
 
 export const workerProfiles = pgTable("worker_profiles", {
   id: serial("id").primaryKey(),
-  ownerKey: text("owner_key").notNull(),
+  ownerKey: text("owner_key").notNull().unique("worker_profiles_owner_key_unique"),
   displayName: text("display_name").notNull().default("StageWire Worker"),
   homeCityState: text("home_city_state").notNull().default(""),
   phone: text("phone").notNull().default(""),
@@ -35,7 +35,7 @@ export const workerProfiles = pgTable("worker_profiles", {
   shareCertifications: boolean("share_certifications").notNull().default(true),
   taxReservePercent: integer("tax_reserve_percent").notNull().default(25),
 }, (table) => [
-  uniqueIndex("worker_profiles_owner_key_unique").on(table.ownerKey),
+
   check("worker_profiles_tax_reserve_percent_check", sql`${table.taxReservePercent} between 0 and 100`),
 ]);
 

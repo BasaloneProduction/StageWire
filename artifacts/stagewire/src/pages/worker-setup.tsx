@@ -104,7 +104,7 @@ export default function WorkerSetupPage() {
   }, [worker]);
 
   if (profile.isLoading) return <div className="page-wrap"><div className="card card-pad"><h2>Opening worker setup…</h2></div></div>;
-  if (profile.isError || !worker) return <div className="page-wrap"><div className="error-box"><strong>Worker setup could not load.</strong><button className="btn btn-quiet" onClick={() => profile.refetch()}>Try again</button></div></div>;
+  if (profile.isError || !worker) return <div className="page-wrap"><div className="error-box"><strong>Sign in to create or open your worker record.</strong><button className="btn btn-quiet" onClick={() => profile.refetch()}>Try again</button></div><AccountSecurityPanel /></div>;
 
   const share: ShareSettings = shareDraft ?? {
     sharePhoto: worker.sharePhoto,
